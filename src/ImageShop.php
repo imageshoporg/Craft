@@ -21,6 +21,8 @@ use craft\services\Utilities;
 use webdna\imageshop\fields\ImageShopField;
 use webdna\imageshop\models\Settings;
 use webdna\imageshop\services\ImageShop as Service;
+use webdna\imageshop\services\Matrix;
+use webdna\imageshop\services\SuperTable as SuperTable;
 use webdna\imageshop\utilities\ImageShop as UtilitiesImageShop;
 use yii\base\Event;
 
@@ -59,6 +61,8 @@ class ImageShop extends Plugin
             
         $this->setComponents([
             'service' => Service::class,
+            'supertable' => SuperTable::class,
+            'matrix' => Matrix::class
         ]);
 
         Event::on(

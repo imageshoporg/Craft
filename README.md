@@ -117,4 +117,5 @@ DocumentId:     {{ entry.imageshopField.documentId }}
 Raw:            {{ entry.imageshopField.json | json_encode(constant("JSON_PRETTY_PRINT")) }}
 ```
 
-
+### Syncing image updates to an imageshop asset within a field
+Within Utilities is the ability to update the meta data of files within the fields of the CMS. First click the 'fetch updated documents' button, this will find any data in your imageshop library that has changed since the last sync. Once this has been ran once, these changes can be applied to all corresponding imageshop documents stored in your content by using the 'Sync Images' button.

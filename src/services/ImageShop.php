@@ -88,22 +88,27 @@ class ImageShop extends Component
      *
      * @return array an array of column names
      **/
-    public function getImageShopFields(): array
+    public function getImageShopFields(?string $context=null): array
     {
-        $imageShopFields = Craft::$app->getFields()->getFieldsByType(ImageShopField::class);
+        $imageShopFields = Craft::$app->getFields()->getFieldsByType(ImageShopField::class,$context);
         $fields = [];
+
         foreach ($imageShopFields as $field) {
             $columnName = '';
             if ($field->columnPrefix) {
                 $columnName .= $field->columnPrefix . '_';
             }
-            $columnName .= 'field_' . $field->handle;
+            $columnName .= 'field_';
+            if (!empty($context) && str_contains($context,'matrixBlockType:')) {
+                $uid = end(explode(':',$context));
+                $columnName .= Plugin::getInstance()->matrix->getBlockTypeHandleByUid($uid) . '_';
+            }
+            $columnName .= $field->handle;
             if ($field->columnSuffix) {
                 $columnName .= '_' . $field->columnSuffix;
             }
             $fields[] = $columnName;
         }
-
         return $fields;
     }
 
@@ -134,7 +139,8 @@ class ImageShop extends Component
                 'rowId' => $value['id'],
                 'rowUid' => $value['uid'],
                 'documentIds' => [],
-                'fields' => []
+                'fields' => [],
+                'table' => Table::CONTENT
             ];
             
             foreach ($fields as $field) {
@@ -156,6 +162,15 @@ class ImageShop extends Component
             }
             $rows[] = $row;
         }
+        // matrix fields
+        $rows = array_merge(Plugin::getInstance()->matrix->getAllImageShopContentRows(), $rows);
+
+        if (Craft::$app->getPlugins()->isPluginEnabled('super-table')) {
+            $rows = array_merge(Plugin::getInstance()->supertable->getAllImageShopContentRows(), $rows);
+        }
+
+        // add an event here to allow other plugins to register?
+
         return $rows;
 
     }
@@ -164,16 +179,16 @@ class ImageShop extends Component
      * Updates the content of an imageshop field with data from the
      * recently updated cache
      * 
-     * @param array $config Details of the row to be updated, must contain 'rowId','rowUid' and 'documentId'
+     * @param array $config Details of the row to be updated, must contain 'table','rowId','rowUid' and 'documentId'
      **/
     public function updateContentRow(array $config): void
     {
-        $fieldColumnNames = $this->getImageShopFields();
+        $fieldColumnNames = array_keys($config['fields']);
         $updatedDocuments = $this->getDocumentCache();
         
         $rowsQuery = (new Query())
             ->select($fieldColumnNames)
-            ->from(Table::CONTENT)
+            ->from($config['table'])
             ->where([
                 'id' => $config['rowId'],
                 'uid' => $config['rowUid']
@@ -205,7 +220,7 @@ class ImageShop extends Component
         Craft::$app->getDb()
             ->createCommand()
             ->update(
-                Table::CONTENT, 
+                $config['table'], 
                 $newData, 
                 [
                     'id' => $config['rowId'],
@@ -246,9 +261,9 @@ class ImageShop extends Component
     public function updateRecentlyUpdatedCache(): void
     {
         $recentlyUpdatedIds = $this->_getRecentlyUpdated();
-        //Craft::dd($recentlyUpdatedIds);
+        // Craft::dd($recentlyUpdatedIds);
         $imageShopDbRows = $this->getAllImageShopContentRows();
-        //Craft::dd($imageShopDbRows);
+        // Craft::dd($imageShopDbRows);
         $this->_getNewImageData($imageShopDbRows, $recentlyUpdatedIds);
     }
 
@@ -339,6 +354,7 @@ class ImageShop extends Component
             ]);*/
             
             Craft::$app->getQueue()->ttr(3600)->push(new Sync([
+                'table' => $row['table'],
                 'rowId' => $row['rowId'],
                 'rowUid' => $row['rowUid'],
                 'documentIds' => Json::encode($row['documentIds']),
@@ -356,7 +372,7 @@ class ImageShop extends Component
      * @param string $lang Language
      * @return string Sanitized language
      **/
-    public function sanitizeLanguage(string $lang = null): ?string
+    public function sanitizeLanguage(?string $lang = null): ?string
     {
         $settings = Plugin::getInstance()->getSettings();
         if (!$lang) {

@@ -17,12 +17,14 @@ class Sync extends BaseJob
     public string $rowUid = '';
     public string $documentIds = '';
     public string $fields = '';
+    public string $table = '';
     public int $index = 0;
     public int $count = 0;
 
     function execute($queue): void
     {
         ImageShop::getInstance()->service->updateContentRow([
+            'table' => $this->table,
             'rowId' => $this->rowId,
             'rowUid' => $this->rowUid,
             'documentIds' => Json::decode($this->documentIds),
@@ -32,6 +34,6 @@ class Sync extends BaseJob
 
     protected function defaultDescription(): ?string
     {
-        return "Re-syncing imageshop data {$this->index} of {$this->count}";
+        return "Re-syncing imageshop data {($this->index + 1)} of {$this->count}";
     }
 }
