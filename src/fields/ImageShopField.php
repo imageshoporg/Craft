@@ -168,6 +168,7 @@ class ImageShopField extends Field
             [
                 'name' => $this->handle,
                 'value' => $value,
+                'valueArray' => array_map(fn($image) => $image->getJson(), $value),
                 'field' => $this,
                 'id' => $id,
                 'namespace' => $namespacedId,

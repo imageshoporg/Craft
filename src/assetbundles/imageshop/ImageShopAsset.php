@@ -36,6 +36,7 @@ class ImageShopAsset extends AssetBundle
         ];
 
         $this->js = [
+            'js/Sortable.min.js',
             'js/ImageShop.js',
         ];
 

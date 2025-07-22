@@ -44,12 +44,86 @@
                      if (event.origin == 'https://client.imageshop.no') {
                          if (this.$open) {
                              this.$open = false;
-                             this.$hiddenInput.val(event.data);
                              this.$popupWindow.close();
-                             this.updatePreview(event.data);
+
+                             let existingData = [];
+                             let newData = [];
+
+                             try {
+                                 const inputVal = this.$hiddenInput.val();
+                                 if (inputVal) {
+                                     existingData = JSON.parse(inputVal);
+                                     if (!Array.isArray(existingData)) {
+                                         existingData = [existingData];
+                                     }
+                                 }
+                             } catch (e) {
+                                 existingData = [];
+                             }
+
+                             try {
+                                 newData = JSON.parse(event.data);
+                                 if (!Array.isArray(newData)) {
+                                     newData = [newData];
+                                 }
+                             } catch (e) {
+                                 newData = [];
+                             }
+
+                             let merged = [...existingData, ...newData];
+                             let unique = [];
+                             let codes = new Set();
+                             merged.forEach((img) => {
+                                 if (!codes.has(img.code)) {
+                                     unique.push(img);
+                                     codes.add(img.code);
+                                 }
+                             });
+
+                             this.$hiddenInput.val(JSON.stringify(unique));
+                             this.updatePreview(JSON.stringify(unique));
+
                          }
                      }
                  }.bind(this), false);
+
+                 this.initDragAndDrop();
+             },
+
+             initDragAndDrop: function () {
+                 const self = this;
+
+                 Sortable.create(this.$previewInput[0], {
+                     animation: 150,
+                     handle: '.imageshop-img-container',
+                     onEnd: function () {
+                         self.syncInputWithPreview();
+                     }
+                 });
+             },
+
+             syncInputWithPreview: function () {
+                 let currentData;
+                 try {
+                     currentData = JSON.parse(this.$hiddenInput.val());
+                     if (!Array.isArray(currentData)) {
+                         currentData = [currentData];
+                     }
+                 } catch (e) {
+                     currentData = [];
+                 }
+
+                 const sortedData = [];
+
+                 this.$previewInput.find('.imageshop-img-container').each(function () {
+                     const code = $(this).find('.imageshop-remove').data('img-code');
+                     const match = currentData.find(item => item.code === code);
+                     if (match) {
+                         sortedData.push(match);
+                     }
+                 });
+
+                 this.$hiddenInput.val(JSON.stringify(sortedData));
              },
  
              removeSelection: function (event) {

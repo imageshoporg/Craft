@@ -51,6 +51,6 @@
     {{ forms.hidden({
         id: id ~ namespace,
         name: name,
-        value: value ? ((value is array ? value : value.json) | json_encode) : null,
+        value: valueArray|json_encode,
     })|attr({class: 'imageshop-value'}) }}
 </div>

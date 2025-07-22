@@ -1,5 +1,6 @@
 {
     "name": "webdna/imageshop-dam",
+    "version": "2.2.0",
     "description": "ImageShop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
