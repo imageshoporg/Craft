@@ -1,0 +1,15 @@
+{% for image in images %}
+    <div class="imageshop-img-container">
+        <div class="imageshop-img-container__wrapper">
+            <img src="{{ image.image }}" width="100">
+        </div>
+        <div class="imageshop-label">
+            <div class="label">
+                <span class="title">
+                    {{ image.getAdminLabel() }}
+                </span>
+            </div>
+            <a class="delete icon imageshop-remove" title="Remove" data-img-code="{{ image.code }}"></a>
+        </div>
+    </div>
+{% endfor %}

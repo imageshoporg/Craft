@@ -10,123 +10,126 @@
  * @since     2.0.0ImageShop
  */
 
- (function ($) {
- 
-     Craft.ImageShopDAMField = Garnish.Base.extend(
-         {
-             $container: null,
-             $trigger: null,
-             $hiddenInput: null,
-             $previewInput: null,
-             $removeButton: null,
-             $url: null,
-             $popupWindow: null,
-             $open: false,
-             $name: null,
- 
-             init: function (options) {
-                 
-                 this.$container = $('[data-id="' + options.namespace + 'imageshop"]');
-                 this.$url = options.url;
-                 this.$name = options.name,
-                 this.$trigger = this.$container.find(".imageshop-trigger");
-                 this.$hiddenInput = this.$container.find(".imageshop-value");
-                 this.$previewInput = this.$container.find(".imageshop-preview");
-                 let self = this;
+(function ($) {
 
-                 this.$previewInput.find(".imageshop-remove").each(function( index ) {
+    Craft.ImageShopDAMField = Garnish.Base.extend(
+        {
+            $container: null,
+            $trigger: null,
+            $hiddenInput: null,
+            $previewInput: null,
+            $removeButton: null,
+            $url: null,
+            $popupWindow: null,
+            $open: false,
+            $name: null,
+            $listElement: null,
+
+            init: function (options) {
+
+                this.$container = $('[data-id="' + options.namespace + 'imageshop"]');
+                this.$listElement = this.$container.find('[data-imageshop-list]');
+
+                this.$url = options.url;
+                this.$name = options.name,
+                    this.$trigger = this.$container.find(".imageshop-trigger");
+                this.$hiddenInput = this.$container.find(".imageshop-value");
+                this.$previewInput = this.$container.find(".imageshop-preview");
+                let self = this;
+
+                this.$previewInput.find(".imageshop-remove").each(function (index) {
                     self.addListener(this, 'click', 'removeSelection');
-                  });
- 
-                 this.addListener(this.$trigger, "click", "showPopup"); 
- 
-                 window.addEventListener("message", function (event) {
-                     if (event.origin == 'https://client.imageshop.no') {
-                         if (this.$open) {
-                             this.$open = false;
-                             this.$popupWindow.close();
+                });
 
-                             let existingData = [];
-                             let newData = [];
+                this.addListener(this.$trigger, "click", "showPopup");
 
-                             try {
-                                 const inputVal = this.$hiddenInput.val();
-                                 if (inputVal) {
-                                     existingData = JSON.parse(inputVal);
-                                     if (!Array.isArray(existingData)) {
-                                         existingData = [existingData];
-                                     }
-                                 }
-                             } catch (e) {
-                                 existingData = [];
-                             }
+                window.addEventListener("message", function (event) {
+                    if (event.origin == 'https://client.imageshop.no') {
+                        if (this.$open) {
+                            this.$open = false;
+                            this.$popupWindow.close();
 
-                             try {
-                                 newData = JSON.parse(event.data);
-                                 if (!Array.isArray(newData)) {
-                                     newData = [newData];
-                                 }
-                             } catch (e) {
-                                 newData = [];
-                             }
+                            let existingData = [];
+                            let newData = [];
 
-                             let merged = [...existingData, ...newData];
-                             let unique = [];
-                             let codes = new Set();
-                             merged.forEach((img) => {
-                                 if (!codes.has(img.code)) {
-                                     unique.push(img);
-                                     codes.add(img.code);
-                                 }
-                             });
+                            try {
+                                const inputVal = this.$hiddenInput.val();
+                                if (inputVal) {
+                                    existingData = JSON.parse(inputVal);
+                                    if (!Array.isArray(existingData)) {
+                                        existingData = [existingData];
+                                    }
+                                }
+                            } catch (e) {
+                                existingData = [];
+                            }
 
-                             this.$hiddenInput.val(JSON.stringify(unique));
-                             this.updatePreview(JSON.stringify(unique));
+                            try {
+                                newData = JSON.parse(event.data);
+                                if (!Array.isArray(newData)) {
+                                    newData = [newData];
+                                }
+                            } catch (e) {
+                                newData = [];
+                            }
 
-                         }
-                     }
-                 }.bind(this), false);
+                            let merged = [...existingData, ...newData];
+                            let unique = [];
+                            let codes = new Set();
+                            merged.forEach((img) => {
+                                if (!codes.has(img.code)) {
+                                    unique.push(img);
+                                    codes.add(img.code);
+                                }
+                            });
 
-                 this.initDragAndDrop();
-             },
+                            this.$hiddenInput.val(JSON.stringify(unique));
+                            this.updatePreview(JSON.stringify(unique));
 
-             initDragAndDrop: function () {
-                 const self = this;
+                        }
+                    }
+                }.bind(this), false);
 
-                 Sortable.create(this.$previewInput[0], {
-                     animation: 150,
-                     handle: '.imageshop-img-container',
-                     onEnd: function () {
-                         self.syncInputWithPreview();
-                     }
-                 });
-             },
+                this.initDragAndDrop();
+            },
 
-             syncInputWithPreview: function () {
-                 let currentData;
-                 try {
-                     currentData = JSON.parse(this.$hiddenInput.val());
-                     if (!Array.isArray(currentData)) {
-                         currentData = [currentData];
-                     }
-                 } catch (e) {
-                     currentData = [];
-                 }
+            initDragAndDrop: function () {
+                const self = this;
 
-                 const sortedData = [];
+                Sortable.create(this.$previewInput[0], {
+                    animation: 150,
+                    handle: '.imageshop-img-container',
+                    onEnd: function () {
+                        self.syncInputWithPreview();
+                    }
+                });
+            },
 
-                 this.$previewInput.find('.imageshop-img-container').each(function () {
-                     const code = $(this).find('.imageshop-remove').data('img-code');
-                     const match = currentData.find(item => item.code === code);
-                     if (match) {
-                         sortedData.push(match);
-                     }
-                 });
+            syncInputWithPreview: function () {
+                let currentData;
+                try {
+                    currentData = JSON.parse(this.$hiddenInput.val());
+                    if (!Array.isArray(currentData)) {
+                        currentData = [currentData];
+                    }
+                } catch (e) {
+                    currentData = [];
+                }
 
-                 this.$hiddenInput.val(JSON.stringify(sortedData));
-             },
- 
-             removeSelection: function (event) {
+                const sortedData = [];
+
+                this.$previewInput.find('.imageshop-img-container').each(function () {
+                    const code = $(this).find('.imageshop-remove').data('img-code');
+                    const match = currentData.find(item => item.code === code);
+                    if (match) {
+                        sortedData.push(match);
+                    }
+                });
+
+                this.$hiddenInput.val(JSON.stringify(sortedData));
+            },
+
+            removeSelection: function (event) {
                 let code = event.currentTarget.dataset.imgCode;
                 let input = this.$hiddenInput.val();
                 this.$hiddenInput.val(null);
@@ -137,65 +140,67 @@
                         let filtered = json.filter((image) => ('code' in image) && (image.code != code));
                         this.$hiddenInput.val(JSON.stringify(filtered));
                     }
-                    
-                } catch (error) {
-                    
-                }
-                $(event.currentTarget).parents().eq(1).remove();                
-                
-             },
- 
-             removePreview: function () {
-                this.$previewInput.empty();
-             },
 
- 
-             showPopup: function (ev) {
-                 ev.preventDefault();
-                 this.$open = true;
- 
-                 // Sensible defaults
-                 var width = 950;
-                 var height = 650;
- 
-                 var leftPosition = (screen.width) ? (screen.width - width) / 2 : 0;
-                 var topPosition = (screen.height) ? (screen.height - height) / 2 : 0;
-                 var settings = 'height=' + height + ',width=' + width + ',top=' + topPosition + ',left=' + leftPosition + ',resizable';
-                 this.$popupWindow = window.open(this.$url, "imageshop", settings);
-             },
- 
-             updatePreview: function (data) {
+                } catch (error) {
+
+                }
+                $(event.currentTarget).parents().eq(1).remove();
+
+            },
+
+            removePreview: function () {
+                this.$previewInput.empty();
+            },
+
+
+            showPopup: function (ev) {
+                ev.preventDefault();
+                this.$open = true;
+
+                // Sensible defaults
+                var width = 950;
+                var height = 650;
+
+                var leftPosition = (screen.width) ? (screen.width - width) / 2 : 0;
+                var topPosition = (screen.height) ? (screen.height - height) / 2 : 0;
+                var settings = 'height=' + height + ',width=' + width + ',top=' + topPosition + ',left=' + leftPosition + ',resizable';
+                this.$popupWindow = window.open(this.$url, "imageshop", settings);
+            },
+
+            updatePreview: function (data) {
                 var json = JSON.parse(data);
-                console.log('json data',data);
+                console.log('json data', data);
+
                 //  have we returned multiple?
                 this.removePreview();
                 if (!Array.isArray(json)) {
                     json = [json];
                 }
 
-                json.forEach( image => {
-                    var url = image.image.file;
-                    var label = image.text.no.title || image.code;
-                    var imageInstance = $('<div>', {
-                        class: 'imageshop-img-container',
-                    }).appendTo(this.$previewInput);
-                    
-                    imageInstance.append($('<img>', {
-                        width: 100,
-                        src: url
-                    }));
+                // update list
+                var controllerUrl = Craft.baseCpUrl + '&p=actions/imageshop-dam/content/get-image-list';
+                var listElement = this.$listElement;
+                var object = this;
 
-                    var labelDiv = $("<div class='imageshop-label'>");
-                    var inner1 = $("<div class='label'><span class='title'>" + label + "</span></div>");
-                    var inner2 = $("<a class='delete icon imageshop-remove' title='Remove' data-img-code='" + image.code + "'></a>");
-                    this.addListener(inner2, "click", 'removeSelection');
-
-                    labelDiv.append(inner1);
-                    labelDiv.append(inner2);
-                    imageInstance.append(labelDiv);
+                $.ajax({
+                    url: controllerUrl,
+                    method: "POST",
+                    data: {
+                        jsonData: json,
+                    },
+                    dataType: "json",
+                    headers: {
+                        "Accept": "application/json"
+                    },
+                    success: function (data) {
+                        listElement.html(data.result);
+                        listElement.find('.imageshop-remove').each(function(){
+                            object.addListener($(this), "click", 'removeSelection');
+                        });
+                    }
                 });
-                
-             }
-         });
- 
- })(jQuery);
+
+            }
+        });
+
+})(jQuery);

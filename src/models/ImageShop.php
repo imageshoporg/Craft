@@ -180,6 +180,15 @@ class ImageShop extends Model implements Serializable
     
         return $this->_json["text"][$lang][$key];
     }
+
+    public function getAdminLabel()
+    {
+        $title = $this->getTitle();
+        if(!empty($title)){
+            return $title;
+        }
+        return $this->getCode();
+    }
     
     public function getData(): ?string
     {
