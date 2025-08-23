@@ -91,6 +91,7 @@
                 }.bind(this), false);
 
                 this.initDragAndDrop();
+                this.updateAltText();
             },
 
             initDragAndDrop: function () {
@@ -98,7 +99,7 @@
 
                 Sortable.create(this.$previewInput[0], {
                     animation: 150,
-                    handle: '.imageshop-img-container',
+                    handle: '.imageshop-img-container .move',
                     onEnd: function () {
                         self.syncInputWithPreview();
                     }
@@ -127,6 +128,53 @@
                 });
 
                 this.$hiddenInput.val(JSON.stringify(sortedData));
+            },
+
+            updateAltText: function () {
+
+                var obj = this;
+                this.$container.find('[data-alt-text]').on('input', function(){
+
+                    let currentData;
+                    try {
+                        currentData = JSON.parse(obj.$hiddenInput.val());
+                        if (!Array.isArray(currentData)) {
+                            currentData = [currentData];
+                        }
+                    } catch (e) {
+                        currentData = [];
+                    }
+
+                    const updatedData = [];
+                    obj.$previewInput.find('.imageshop-img-container').each(function () {
+                        const code = $(this).find('.imageshop-remove').data('img-code');
+                        const match = currentData.find(item => item.code === code);
+                        if (match) {
+                            var language = obj.$container.attr('data-current-language');
+                            if(language in match.text){
+                                match.text[language].altText = $(this).find('[data-alt-text]').val();
+                            }else{
+                                var newContent = {
+                                    "title": null,
+                                    "description": null,
+                                    "rights": null,
+                                    "credits": null,
+                                    "tags": null,
+                                    "altText": null,
+                                    "categories": null,
+                                    "documentinfo": null
+                                }
+                                newContent.altText = $(this).find('[data-alt-text]').val();
+                                match.text[language] = newContent
+                            }
+                            updatedData.push(match);
+                        }
+                    });
+
+                    obj.$hiddenInput.val(JSON.stringify(updatedData));
+
+                });
+
             },
 
             removeSelection: function (event) {
@@ -169,7 +217,6 @@
 
             updatePreview: function (data) {
                 var json = JSON.parse(data);
-                console.log('json data', data);
 
                 //  have we returned multiple?
                 this.removePreview();
@@ -181,12 +228,14 @@
                 var controllerUrl = Craft.baseCpUrl + '&p=actions/imageshop-dam/content/get-image-list';
                 var listElement = this.$listElement;
                 var object = this;
+                var language = this.$container.attr('data-current-language');
 
                 $.ajax({
                     url: controllerUrl,
                     method: "POST",
                     data: {
                         jsonData: json,
+                        language: language,
                     },
                     dataType: "json",
                     headers: {

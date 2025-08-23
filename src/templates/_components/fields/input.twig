@@ -15,7 +15,8 @@
 
 {% import "_includes/forms" as forms %}
 
-<div id="imageshop-{{ field.id }}" data-id="{{ namespace }}imageshop">
+
+<div id="imageshop-{{ field.id }}" data-id="{{ namespace }}imageshop" data-current-language="{{ field.getCurrentAdminLanguage() }}">
 
     <div class="mb-2">
         <div class="imageshop-preview element removable large hasthum" data-imageshop-list>
@@ -23,11 +24,13 @@
                 {% if value is array %}
                     {% include 'imageshop-dam/_components/fields/input-list.twig' with {
                         images: value,
+                        language: field.getCurrentAdminLanguage(),
                     } %}
                 {% else %}
                     {% if value.image %}
                         {% include 'imageshop-dam/_components/fields/input-list.twig' with {
                             images: [value.image],
+                            language: field.getCurrentAdminLanguage(),
                         } %}
                     {% endif %}
                 {% endif %}
@@ -52,6 +55,7 @@
 }
 .imageshop-label{
     margin-top: 0.5rem;
+    font-weight: bold;
 }
 .imageshop-preview{
     width: 100%;
@@ -67,5 +71,21 @@
         object-fit: contain;
     }
 }
+.imageshop-img-container__alt{
+    margin-top: 0.5rem;
+}
+.imageshop-img-container{
+    position: relative;
+}
 
+.imageshop-img-container__reorder{
+    position: absolute;
+    top: 1px;
+    left: 5px;
+}
+.imageshop-img-container__remove{
+    position: absolute;
+    top: 0px !important;
+    right: 5px !important;
+}
 {% endcss %}

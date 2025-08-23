@@ -184,4 +184,18 @@ class ImageShopField extends Field
         return Type::listOf(ImageShopType::getType());
     }
 
+    public function getCurrentAdminLanguage()
+    {
+        $site = null;
+        $handle = Craft::$app->request->getParam('site');
+        if($handle){
+            $site = Craft::$app->sites->getSiteByHandle($handle);
+        }
+        if(is_null($site)){
+            $site = Craft::$app->sites->getPrimarySite();
+        }
+        $language = $site->language;
+        return $language;
+    }
+
 }

@@ -168,7 +168,7 @@ class ImageShop extends Model implements Serializable
     
     protected function getTextInfo($key, $lang = null): ?string
     {
-        $lang = $this->getLang($lang);
+//        $lang = $this->getLang($lang);
     
         if (!isset ($this->_json["text"][$lang])) {
             return null;

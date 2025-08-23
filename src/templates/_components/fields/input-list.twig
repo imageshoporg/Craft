@@ -1,5 +1,7 @@
 {% for image in images %}
     <div class="imageshop-img-container">
+        <a class="move icon imageshop-img-container__reorder" title="Reorder" aria-label="Reorder" role="button">&nbsp;</a>
+        <a class="delete icon imageshop-remove imageshop-img-container__remove" title="Remove" data-img-code="{{ image.code }}"></a>
         <div class="imageshop-img-container__wrapper">
             <img src="{{ image.image }}" width="100">
         </div>
@@ -9,7 +11,10 @@
                     {{ image.getAdminLabel() }}
                 </span>
             </div>
-            <a class="delete icon imageshop-remove" title="Remove" data-img-code="{{ image.code }}"></a>
+        </div>
+        <div class="imageshop-img-container__alt">
+            <label for="alt-{{ image.code }}" class="label">Alternative text - {{ language }}:</label>
+            <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="4" data-alt-text>{{ image.getAltText(language) }}</textarea>
         </div>
     </div>
 {% endfor %}
