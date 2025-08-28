@@ -126,9 +126,12 @@ class ImageShop extends Model implements Serializable
     
     protected function getLang($lang = null): ?string
     {
+        if(is_null($lang)){
+            $lang = Craft::$app->getSites()->getCurrentSite()->language;
+        }
         return Plugin::getInstance()->service->sanitizeLanguage($lang);
     }
-    
+
     public function getTags($lang = null): ?string
     {
         $tags = $this->getTextInfo("tags", $lang);
@@ -168,7 +171,7 @@ class ImageShop extends Model implements Serializable
     
     protected function getTextInfo($key, $lang = null): ?string
     {
-//        $lang = $this->getLang($lang);
+        $lang = $this->getLang($lang);
     
         if (!isset ($this->_json["text"][$lang])) {
             return null;

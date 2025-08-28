@@ -11,6 +11,7 @@
 namespace webdna\imageshop\fields;
 
 use webdna\imageshop\ImageShop;
+use webdna\imageshop\ImageShop as Plugin;
 use webdna\imageshop\models\ImageShop as Model;
 use webdna\imageshop\assetbundles\imageshop\ImageShopAsset;
 use webdna\imageshop\gql\types\ImageShopType;
@@ -195,6 +196,7 @@ class ImageShopField extends Field
             $site = Craft::$app->sites->getPrimarySite();
         }
         $language = $site->language;
+        $language = Plugin::getInstance()->service->sanitizeLanguage($language);
         return $language;
     }
 

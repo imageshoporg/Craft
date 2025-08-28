@@ -358,29 +358,40 @@ class ImageShop extends Component
      **/
     public function sanitizeLanguage(string $lang = null): ?string
     {
-        $settings = Plugin::getInstance()->getSettings();
-        if (!$lang) {
-            $settings = Plugin::$plugin->getSettings();
-            switch ($settings->language) {
-                case 'nb-NO':
-                    $lang = 'no';
-                    break;
-                    
-                case 'en-US':
-                    $lang = 'en';
-                    break;
-                    
-                default:
-                    $lang = 'no';
-                    break;
-            }
-        } else {
-            if (!in_array($lang, ["no", "en", "sv"])) {
-                $lang = "no";
-            }
+        switch ($lang) {
+            case 'nb-NO':
+                $lang = 'no';
+                break;
+
+            default:
+                $lang = \Locale::getPrimaryLanguage($lang);
+                break;
         }
-        
         return $lang;
+
+//        $settings = Plugin::getInstance()->getSettings();
+//        if (!$lang) {
+//            $settings = Plugin::$plugin->getSettings();
+//            switch ($settings->language) {
+//                case 'nb-NO':
+//                    $lang = 'no';
+//                    break;
+//
+//                case 'en-US':
+//                    $lang = 'en';
+//                    break;
+//
+//                default:
+//                    $lang = 'no';
+//                    break;
+//            }
+//        } else {
+//            if (!in_array($lang, ["no", "en", "sv"])) {
+//                $lang = "no";
+//            }
+//        }
+//
+//        return $lang;
     }
 
     /**
@@ -470,4 +481,7 @@ class ImageShop extends Component
 
         return null;
     }
+
+
+
 }
