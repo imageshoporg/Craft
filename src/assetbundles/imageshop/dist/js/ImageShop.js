@@ -134,7 +134,6 @@
 
                 var obj = this;
                 this.$container.find('[data-alt-text]').on('input', function(){
-
                     let currentData;
                     try {
                         currentData = JSON.parse(obj.$hiddenInput.val());
@@ -175,6 +174,10 @@
 
                 });
 
+                this.$container.find('[data-imageshop-trigger-settings]').on('click', function(){
+                    $(this).closest('[data-imageshop-image-wrapper]').find('[data-imageshop-alt-wrapper]').toggle();
+                });
+
             },
 
             removeSelection: function (event) {
@@ -192,7 +195,7 @@
                 } catch (error) {
 
                 }
-                $(event.currentTarget).parents().eq(1).remove();
+                $(event.currentTarget).closest('.imageshop-img-container').remove();
 
             },
 
@@ -246,6 +249,7 @@
                         listElement.find('.imageshop-remove').each(function(){
                             object.addListener($(this), "click", 'removeSelection');
                         });
+                        object.updateAltText();
                     }
                 });
 
