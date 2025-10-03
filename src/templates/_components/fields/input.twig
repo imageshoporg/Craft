@@ -88,4 +88,33 @@
     top: 0px !important;
     right: 5px !important;
 }
+.imageshop-img-container__alt-top{
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+.imageshop-img-container__alt-hide{
+    font-weight: bold;
+    /*margin-bottom: 0.3rem;*/
+    text-transform: uppercase;
+}
+.imageshop-img-container__alt-label{
+    padding-right: 0px !important;
+}
+.imageshop-img-container__alt-trigger{
+    /*font-weight: bold;*/
+}
+.imageshop-img-container__settings{
+    cursor: pointer;
+    position: absolute;
+    left: 6px;
+    top: 24px;
+}
+.imageshop-img-container-icon{
+    opacity: 0;
+    transition: 0.3s;
+}
+.imageshop-img-container:hover .imageshop-img-container-icon{
+    opacity: 1;
+}
 {% endcss %}

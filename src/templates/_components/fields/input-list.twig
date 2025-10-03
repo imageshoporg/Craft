@@ -1,7 +1,8 @@
 {% for image in images %}
-    <div class="imageshop-img-container">
-        <a class="move icon imageshop-img-container__reorder" title="Reorder" aria-label="Reorder" role="button">&nbsp;</a>
-        <a class="delete icon imageshop-remove imageshop-img-container__remove" title="Remove" data-img-code="{{ image.code }}"></a>
+    <div class="imageshop-img-container" data-imageshop-image-wrapper>
+        <a class="move icon imageshop-img-container__reorder imageshop-img-container-icon" title="Reorder" aria-label="Reorder" role="button" title="Sort images">&nbsp;</a>
+        <span data-imageshop-trigger-settings data-icon="settings" class="imageshop-img-container__settings imageshop-img-container-icon" title="Show settings"></span>
+        <a class="delete icon imageshop-remove imageshop-img-container__remove imageshop-img-container-icon" title="Remove image" data-img-code="{{ image.code }}"></a>
         <div class="imageshop-img-container__wrapper">
             <img src="{{ image.image }}" width="100">
         </div>
@@ -12,9 +13,13 @@
                 </span>
             </div>
         </div>
+        <div data-imageshop-alt-wrapper hidden>
         <div class="imageshop-img-container__alt">
-            <label for="alt-{{ image.code }}" class="label">Alternative text - {{ language }}:</label>
-            <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="4" data-alt-text>{{ image.getAltText(language) }}</textarea>
+            <div class="imageshop-img-container__alt-top">
+                <label for="alt-{{ image.code }}" class="label imageshop-img-container__alt-label">Alternative text - {{ language }}:</label>
+            </div>
+            <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="6" data-alt-text>{{ image.getAltText(language) }}</textarea>
+        </div>
         </div>
     </div>
 {% endfor %}
