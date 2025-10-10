@@ -131,9 +131,9 @@
             },
 
             updateAltText: function () {
-
                 var obj = this;
-                this.$container.find('[data-alt-text]').on('input', function(){
+
+                this.$container.find('[data-alt-text], [data-description-text]').on('input', function () {
                     let currentData;
                     try {
                         currentData = JSON.parse(obj.$hiddenInput.val());
@@ -144,16 +144,20 @@
                         currentData = [];
                     }
 
+                    const isAltInput = $(this).is('[data-alt-text]');
+                    const isDescriptionInput = $(this).is('[data-description-text]');
+
                     const updatedData = [];
                     obj.$previewInput.find('.imageshop-img-container').each(function () {
                         const code = $(this).find('.imageshop-remove').data('img-code');
                         const match = currentData.find(item => item.code === code);
+
                         if (match) {
                             var language = obj.$container.attr('data-current-language');
-                            if(language in match.text){
-                                match.text[language].altText = $(this).find('[data-alt-text]').val();
-                            }else{
-                                var newContent = {
+                            let textBlock = match.text[language];
+
+                            if (!textBlock) {
+                                textBlock = {
                                     "title": null,
                                     "description": null,
                                     "rights": null,
@@ -162,22 +166,31 @@
                                     "altText": null,
                                     "categories": null,
                                     "documentinfo": null
-                                }
-                                newContent.altText = $(this).find('[data-alt-text]').val();
-                                match.text[language] = newContent
+                                };
+                                match.text[language] = textBlock;
                             }
+
+                            if (isAltInput) {
+                                textBlock.altText = $(this).find('[data-alt-text]').val();
+                            }
+
+                            if (isDescriptionInput) {
+                                textBlock.description = $(this).find('[data-description-text]').val();
+                            }
+
                             updatedData.push(match);
                         }
                     });
 
                     obj.$hiddenInput.val(JSON.stringify(updatedData));
-
                 });
 
-                this.$container.find('[data-imageshop-trigger-settings]').on('click', function(){
-                    $(this).closest('[data-imageshop-image-wrapper]').find('[data-imageshop-alt-wrapper]').toggle();
+                this.$container.find('[data-imageshop-trigger-settings]').on('click', function () {
+                    $(this)
+                        .closest('[data-imageshop-image-wrapper]')
+                        .find('[data-imageshop-alt-wrapper]')
+                        .toggle();
                 });
-
             },
 
             removeSelection: function (event) {

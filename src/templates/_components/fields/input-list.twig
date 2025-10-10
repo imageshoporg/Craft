@@ -14,12 +14,21 @@
             </div>
         </div>
         <div data-imageshop-alt-wrapper hidden>
+
         <div class="imageshop-img-container__alt">
             <div class="imageshop-img-container__alt-top">
                 <label for="alt-{{ image.code }}" class="label imageshop-img-container__alt-label">Alternative text - {{ language }}:</label>
             </div>
             <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="6" data-alt-text>{{ image.getAltText(language) }}</textarea>
         </div>
+
+        <div class="imageshop-img-container__alt">
+            <div class="imageshop-img-container__alt-top">
+                <label for="description-{{ image.code }}" class="label imageshop-img-container__alt-label">Description - {{ language }}:</label>
+            </div>
+            <textarea name="description-{{ image.code }}" class="text fullwidth" rows="6" data-description-text>{{ image.getDescription(language) }}</textarea>
+        </div>
+
         </div>
     </div>
 {% endfor %}
