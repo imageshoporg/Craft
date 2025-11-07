@@ -117,4 +117,25 @@ DocumentId:     {{ entry.imageshopField.documentId }}
 Raw:            {{ entry.imageshopField.json | json_encode(constant("JSON_PRETTY_PRINT")) }}
 ```
 
+## Sync metadata utility
+
+Imageshop provides a utility tool for updating image metadata.
+
+To access it, go to Utilities → Imageshop, and click Sync Metadata.
+
+This action will add a job to the queue that updates all elements - including Entries, Categories, Users, Global Sets, Assets, Matrix Blocks, and Commerce Products - that contain Imageshop fields. The content will be refreshed with the latest data from the API, such as image descriptions and alt text.
+
+This is useful in two situations:
+
+* When an image in the Imageshop service has been updated since it was last added to the Craft CMS system.
+
+* When you want to override any manual changes made to images (for example, manually edited alt text).
+
+## Using Imageshop Field as an OpenGraph Image Source
+
+An Imageshop field can be used as the source for the OpenGraph image in the SEOmatic plugin.
+To enable this functionality, first define which field should be used as the image source in the Imageshop plugin settings, under “Imageshop field used to generate OpenGraph image.”
+
+This field must be assigned to the field layout of the specific element type - for example, an Entry, Category, User, Product, or any other element - for which you want to override the OpenGraph image. The first image from this field will be used.
+
 
