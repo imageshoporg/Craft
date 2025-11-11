@@ -37,23 +37,31 @@ php craft plugin/install imageshop-dam
 
 - You will now have access to the "Imageshop" in the Field type dropdown on the field creation page.
 
+## ImageShop DAM field
 
+To retrieve images from the ImageShop service, you must first create an ImageShop DAM field and assign it to an entry or any another element. The field can hold multiple images and images can be reordered within the field by dragging the grab‑icon that appears in the top‑left corner of each image.
+
+In addition to the image itself, metadata such as the image title and alt text are pulled from the service. This texts exists in several languages, and the plugin displays the appropriate version based on the site’s current language. If current site language content was not present in data pulled from service, default language content will be used. Important: Because of technical constraints, the ImageShop field must now be set to translatable.
+
+You can override the image description and alt text by clicking the cog icon that appears in the top‑left corner when you hover over an image in the control panel. Doing so reveals the override input fields. This works for all languages, and you can also provide descriptions and alt text for languages that were not originally available in the ImageShop service.
 
 ## Templating:
 
 
 ### Plain and simple
 
+Please note the `getAltText()` method which uses image alt text for the current site language. You can also use `getDescription()` method to grab image description.
+
 Note: Just like templating an assets field, the field will always return an array.
 
 ```twig
-<img src="{{ entry.imageshopField|first.url }}" alt="{{ entry.imageshopField|first.filename }}">
+<img src="{{ entry.imageshopField|first.url }}" alt="{{ entry.imageshopField|first.getAltText() }}">
 ```
 
 ### Multiple images
 ```twig
 {% for image in entry.imageshopField %}
-    <img src="{{ image.url }}" alt="{{ image.filename }}">
+    <img src="{{ image.url }}" alt="{{ image.getAltText() }}">
 {% endfor %}
 ```
 
@@ -138,4 +146,6 @@ To enable this functionality, first define which field should be used as the ima
 
 This field must be assigned to the field layout of the specific element type - for example, an Entry, Category, User, Product, or any other element - for which you want to override the OpenGraph image. The first image from this field will be used.
 
+You can also define a default OpenGraph image. This image will be used when the ImageShop field assigned to the current element is empty, when no ImageShop field is assigned at all, or when no element s associated with specific page.
 
+To enable this behavior, select Global in the “Global set which will be used as source for the default opengraph image.” setting and ensure that a field that is specified in “ImageShop field used to generate OpenGraph image.” setting is assigned to the global set.

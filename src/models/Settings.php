@@ -30,6 +30,9 @@ class Settings extends Model
     public string $key = '';
     
     public string $language = 'no';
+
+    public ?int $openGraphFieldId = null;
+    public ?int $openGraphGlobalId = null;
     
 
     // Public Methods
@@ -44,5 +47,49 @@ class Settings extends Model
             [['token', 'key', 'language'], 'string'],
             [['token', 'key', 'language'], 'required'],
         ];
+    }
+
+    public function getOpengraphFieldOptions()
+    {
+        $fields = \Craft::$app->fields->getAllFields();
+        $fields = array_filter($fields, function($field){
+            return get_class($field) == \webdna\imageshop\fields\ImageShopField::class;
+        });
+
+        $options = [
+            [
+                'value' => null,
+                'label' => 'Select',
+            ]
+        ];
+
+        $optionsFields = array_map(function($field){
+            return [
+                'value' => $field->id,
+                'label' => $field->name,
+            ];
+        }, $fields);
+        $options = array_merge($options, $optionsFields);
+        return $options;
+    }
+
+    public function getOpengraphGlobalOptions()
+    {
+        $allSets = Craft::$app->globals->getAllSets();
+        $options = [
+            [
+                'value' => null,
+                'label' => 'Select',
+            ]
+        ];
+
+        $optionsFields = array_map(function($field){
+            return [
+                'value' => $field->id,
+                'label' => $field->name,
+            ];
+        }, $allSets);
+        $options = array_merge($options, $optionsFields);
+        return $options;
     }
 }

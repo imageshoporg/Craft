@@ -91,6 +91,10 @@ class ImageShopField extends Field
             }
         }
 
+        if(is_null($value)){
+            return [];
+        }
+
         return [new Model($value)];
 
     }
@@ -163,13 +167,19 @@ class ImageShopField extends Field
         $jsonVars = Json::encode($jsonVars);
         Craft::$app->getView()->registerJs("new Craft.ImageShopDAMField(" . $jsonVars . ");");
 
+        $value = array_filter($value, function($single){
+            return !is_null($single->getJson());
+        });
+
+        $valueArray = array_map(fn($image) => $image->getJson(), $value);
+
         // Render the input template
         return Craft::$app->getView()->renderTemplate(
             'imageshop-dam/_components/fields/input',
             [
                 'name' => $this->handle,
                 'value' => $value,
-                'valueArray' => array_map(fn($image) => $image->getJson(), $value),
+                'valueArray' => $valueArray,
                 'field' => $this,
                 'id' => $id,
                 'namespace' => $namespacedId,

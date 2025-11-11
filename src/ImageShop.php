@@ -89,6 +89,113 @@ class ImageShop extends Plugin
         Event::on(Utilities::class, Utilities::EVENT_REGISTER_UTILITY_TYPES, function (RegisterComponentTypesEvent $event) {
             $event->types[] = UtilitiesImageShop::class;
         });
+
+
+
+        $this->seomaticEvents();
+
+    }
+
+    public function getOpenGraphPictureForElement($element)
+    {
+        if(!$element){
+            return null;
+        }
+
+        // if field defined in plugin settings and if field exists
+        if(!is_int($this->getSettings()->openGraphFieldId)){
+            return null;
+        }
+
+
+        $field = Craft::$app->fields->getFieldById($this->getSettings()->openGraphFieldId);
+        if(is_null($field)){
+            return null;
+        }
+
+        // if field attached to element
+        $fieldLayout = $element->getFieldLayout() ?? null;
+        if(is_null($fieldLayout)){
+            return null;
+        }
+
+        $found = false;
+        $customFields = $fieldLayout->getCustomFields();
+        foreach ($customFields as $fieldInLayout) {
+            if ($field->id === $fieldInLayout->id) {
+                $found = true;
+                break;
+            }
+        }
+
+        if($found == false){
+            return null;
+        }
+
+        // if proper field
+        if(get_class($field) !== \webdna\imageshop\fields\ImageShopField::class){
+            return null;
+        }
+
+        // if not empty
+        $value = $element->getFieldValue($field->handle);
+        if(empty($value)){
+            return null;
+        }
+
+        // if proper value
+        $imageObj = array_values($value)[0];
+        if(get_class($imageObj) !== \webdna\imageshop\models\ImageShop::class){
+            return null;
+        }
+
+        // if contains image
+        $imageUrl = $imageObj->getUrl();
+        if(empty($imageUrl)){
+            return null;
+        }
+        return $imageUrl;
+    }
+
+    public function seomaticEvents()
+    {
+        // if seomatic installed
+        if(Craft::$app->plugins->isPluginInstalled('seomatic') == false || Craft::$app->plugins->isPluginEnabled('seomatic') == false) {
+            return;
+        }
+
+        // if current element
+        $currentElement = Craft::$app->urlManager->getMatchedElement();
+        $url = $this->getOpenGraphPictureForElement($currentElement);
+
+        if(is_null($url)){
+            $url = $this->getGlobalOgUrl();
+            if(is_null($url)){
+                return;
+            }
+        }
+
+        Event::on(
+            \nystudio107\seomatic\helpers\DynamicMeta::class,
+            \nystudio107\seomatic\helpers\DynamicMeta::EVENT_ADD_DYNAMIC_META,
+            function(\nystudio107\seomatic\events\AddDynamicMetaEvent $event) use($url) {
+                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->twitterImage = $url;
+                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->ogImage = $url;
+                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->seoImage = $url;
+            }
+        );
+
+    }
+
+    public function getGlobalOgUrl()
+    {
+        $globalId = $this->getSettings()->openGraphGlobalId;
+        if(!is_int($globalId)){
+            return null;
+        }
+        $global = Craft::$app->globals->getSetById($globalId);
+        $url = $this->getOpenGraphPictureForElement($global);
+        return $url;
     }
 
     // Protected Methods

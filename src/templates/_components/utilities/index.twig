@@ -1,33 +1,42 @@
-<h2 class="first">{{ 'Fetch latest document changes from ImageShop'|t('imageshop-dam') }}</h2>
-<form class="utility" method="post" accept-charset="UTF-8" style="margin-top: 2rem;">
+{#<h2 class="first">{{ 'Fetch latest document changes from ImageShop'|t('imageshop-dam') }}</h2>#}
+{#<form class="utility" method="post" accept-charset="UTF-8" style="margin-top: 2rem;">#}
 
-    {{ actionInput('imageshop-dam/default/get-changed-documents') }}
-    {{ csrfInput() }}
-    {{ redirectInput('utilities/imageshop-dam') }}
+{#    {{ actionInput('imageshop-dam/default/get-changed-documents') }}#}
+{#    {{ csrfInput() }}#}
+{#    {{ redirectInput('utilities/imageshop-dam') }}#}
 
-    <div class="buttons">
-        <button type="submit" class="btn submit">{{ 'Fetch updated documents'|t('imageshop-dam') }}</button>
-        <div class="utility-status"></div>
-    </div>
-</form>
+{#    <div class="buttons">#}
+{#        <button type="submit" class="btn submit">{{ 'Fetch updated documents'|t('imageshop-dam') }}</button>#}
+{#        <div class="utility-status"></div>#}
+{#    </div>#}
+{#</form>#}
 
-<hr/>
+{#<hr/>#}
 
-<h2>{{ 'Update ImageShop images in database'|t('imageshop-dam') }}</h2>
+{#<h2>{{ 'Update ImageShop images in database'|t('imageshop-dam') }}</h2>#}
 
-{% if not canRunDbUpdate %}
-    <p>{{ 'Please fetch the updated documents from imageshop servers before updating images in the database'|t('imageshop-dam') }}</p>
-{% else %}
+{#{% if not canRunDbUpdate %}#}
+{#    <p>{{ 'Please fetch the updated documents from imageshop servers before updating images in the database'|t('imageshop-dam') }}</p>#}
+{#{% else %}#}
 
-<form class="utility" method="post" accept-charset="UTF-8" style="margin-top: 2rem;">
+<form class="" method="post" accept-charset="UTF-8">
 
     {{ actionInput('imageshop-dam/default/create-sync-jobs') }}
     {{ csrfInput() }}
     {{ redirectInput('utilities/imageshop-dam') }}
+
+    <div>
+        {{ 'When you press this button, Imageshop will update all metadata transferred to Craft from Imageshop, such as alternative text.'|t('imageshop-dam') }}
+        <br>
+        <strong>
+            {{ 'Important: This action cannot be undone.'|t('imageshop-dam') }}
+        </strong>
+    </div>
+
+    <br>
     
-    <div class="buttons">
-        <button type="submit" class="btn submit">{{ 'Sync images'|t('imageshop-dam') }}</button>
-        <div class="utility-status"></div>
+    <div class="">
+        <button type="submit" class="btn submit">{{ 'Sync metadata'|t('imageshop-dam') }}</button>
     </div>
 </form>
-{% endif %}
+{#{% endif %}#}
