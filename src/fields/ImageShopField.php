@@ -74,29 +74,44 @@ class ImageShopField extends Field
      */
     public function normalizeValue($value, ElementInterface $element = null): Model|array|null
     {
-        
-        if ($value instanceof Model) {
-            return [$value];
-        }
-        // its already an array of models
-        if (is_array($value) && array_is_list($value)) {
-            return array_filter($value, fn($image) => $image instanceof Model);
-        }
-
-        if (is_string($value) && Json::isJsonObject($value)) {
-            $json = Json::decode($value);
-            if (array_is_list($json)) {
-                $filtered = array_map(fn($image) => new Model($image), array_filter($json, fn($image) => !empty($image)));            
-                return $filtered;
+        $siteLanguage = null;
+        if ($element) {
+            $site = Craft::$app->getSites()->getSiteById($element->siteId);
+            if ($site) {
+                $siteLanguage = $site->language;
             }
         }
 
-        if(is_null($value)){
+        $models = null;
+
+        if ($value instanceof Model) {
+            $models = [$value];
+        } elseif (is_array($value) && array_is_list($value)) {
+            $models = array_filter($value, fn($image) => $image instanceof Model);
+        } elseif (is_string($value) && Json::isJsonObject($value)) {
+            $json = Json::decode($value);
+            if (array_is_list($json)) {
+                $models = array_map(fn($image) => new Model($image), array_filter($json, fn($image) => !empty($image)));
+            }
+        } elseif (is_null($value)) {
             return [];
         }
 
-        return [new Model($value)];
+        if ($models === null) {
+            $models = [new Model($value)];
+        }
 
+        if ($siteLanguage) {
+            foreach ($models as $model) {
+                $model->setSiteLanguage($siteLanguage);
+            }
+        }
+
+        if (!$this->allowMultiple && count($models) > 1) {
+            $models = array_slice($models, 0, 1);
+        }
+
+        return $models;
     }
 
     /**
@@ -163,6 +178,7 @@ class ImageShopField extends Field
             'namespace' => $namespacedId,
             'prefix' => Craft::$app->getView()->namespaceInputId(''),
             'url' => $url,
+            'allowMultiple' => $this->allowMultiple,
             ];
         $jsonVars = Json::encode($jsonVars);
         Craft::$app->getView()->registerJs("new Craft.ImageShopDAMField(" . $jsonVars . ");");

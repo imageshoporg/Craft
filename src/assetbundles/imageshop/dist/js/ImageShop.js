@@ -24,6 +24,7 @@
             $open: false,
             $name: null,
             $listElement: null,
+            $allowMultiple: true,
 
             init: function (options) {
 
@@ -31,8 +32,9 @@
                 this.$listElement = this.$container.find('[data-imageshop-list]');
 
                 this.$url = options.url;
-                this.$name = options.name,
-                    this.$trigger = this.$container.find(".imageshop-trigger");
+                this.$name = options.name;
+                this.$allowMultiple = options.allowMultiple;
+                this.$trigger = this.$container.find(".imageshop-trigger");
                 this.$hiddenInput = this.$container.find(".imageshop-value");
                 this.$previewInput = this.$container.find(".imageshop-preview");
                 let self = this;
@@ -73,18 +75,24 @@
                                 newData = [];
                             }
 
-                            let merged = [...existingData, ...newData];
-                            let unique = [];
-                            let codes = new Set();
-                            merged.forEach((img) => {
-                                if (!codes.has(img.code)) {
-                                    unique.push(img);
-                                    codes.add(img.code);
-                                }
-                            });
+                            let result;
+                            if (!this.$allowMultiple) {
+                                result = newData.slice(0, 1);
+                            } else {
+                                let merged = [...existingData, ...newData];
+                                let unique = [];
+                                let codes = new Set();
+                                merged.forEach((img) => {
+                                    if (!codes.has(img.code)) {
+                                        unique.push(img);
+                                        codes.add(img.code);
+                                    }
+                                });
+                                result = unique;
+                            }
 
-                            this.$hiddenInput.val(JSON.stringify(unique));
-                            this.updatePreview(JSON.stringify(unique));
+                            this.$hiddenInput.val(JSON.stringify(result));
+                            this.updatePreview(JSON.stringify(result));
 
                         }
                     }
@@ -201,7 +209,7 @@
                 try {
                     let json = JSON.parse(input);
                     if (Array.isArray(json)) {
-                        let filtered = json.filter((image) => ('code' in image) && (image.code != code));
+                        let filtered = json.filter((image) => ('code' in image) && (image.code !== code));
                         this.$hiddenInput.val(JSON.stringify(filtered));
                     }
 
@@ -241,7 +249,7 @@
                 }
 
                 // update list
-                var controllerUrl = Craft.baseCpUrl + '&p=actions/imageshop-dam/content/get-image-list';
+                var controllerUrl = Craft.getActionUrl('imageshop-dam/content/get-image-list');
                 var listElement = this.$listElement;
                 var object = this;
                 var language = this.$container.attr('data-current-language');
@@ -255,7 +263,8 @@
                     },
                     dataType: "json",
                     headers: {
-                        "Accept": "application/json"
+                        "Accept": "application/json",
+                        "X-CSRF-Token": Craft.csrfTokenValue
                     },
                     success: function (data) {
                         listElement.html(data.result);
