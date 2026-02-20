@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 2.4.0 - 2026-02-20
+### Added
+- Focal point support: `getFocalPoint()` on the image model returns CSS-ready `x`/`y` percentages from the ImageShop picker's focal point data.
+- `focalPoint` field in GraphQL type, returning JSON with `x`/`y` percentages.
+- `altText` field in GraphQL type.
+- Documentation for focal point usage in Twig templates and GraphQL.
+
+### Fixed
+- GraphQL queries now return text in the correct site language instead of always using the current site's language.
+- `allowMultiple` setting is now enforced — single-image fields no longer accumulate extra images when the picker is opened repeatedly.
+- Sync job uses correct field column names.
+
+### Changed
+- Added CSRF validation and POST method enforcement on controller actions.
+- Hardened API service layer: validate responses, prevent cache poisoning via document ID validation, use environment variable for API base URL.
+- Added primary key to sync table via migration.
+- Updated plugin logo/branding.
+- Removed unused `UpdateFields` job and orphaned migration.
+- Removed empty `EVENT_AFTER_INSTALL_PLUGIN` handler.
+
 ## 2.3.0 - 2025-11-11
 ### Added
 - Added an option to override image alt text and description.
