@@ -8,7 +8,7 @@ use craft\helpers\Json;
 use webdna\imageshop\ImageShop;
 
 /**
- * Syncs the details of documnets from the recently updated cache to all the
+ * Syncs the details of documents from the recently updated cache to all the
  * content rows in the db that contain imageshop assets
  */
 class Sync extends BaseJob
@@ -22,6 +22,8 @@ class Sync extends BaseJob
 
     function execute($queue): void
     {
+        $this->setProgress($queue, $this->index / max($this->count, 1));
+
         ImageShop::getInstance()->service->updateContentRow([
             'rowId' => $this->rowId,
             'rowUid' => $this->rowUid,

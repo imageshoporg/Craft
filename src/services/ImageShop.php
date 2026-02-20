@@ -23,6 +23,7 @@ use craft\helpers\Db;
 use craft\helpers\Json;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * @author    WebDNA
@@ -36,13 +37,13 @@ class ImageShop extends Component
 
     /**
      * Get a temporary access token
-     * 
+     *
      * @return mixed
      **/
     public function getTemporaryToken(): mixed
     {
         $settings = Plugin::$plugin->getSettings();
-            
+
         // If no token is sent or set in settings
         if (empty($settings->token) || empty($settings->key)) {
             return null;
@@ -68,7 +69,7 @@ class ImageShop extends Component
         }
 
         $language = $this->sanitizeLanguage($language);
-        
+
         $response = $this->_request('GET','/Document/GetDocumentById',[
             'query' => [
                 'DocumentID' => $documentId,
@@ -111,7 +112,7 @@ class ImageShop extends Component
      * Get all rows from the content table that contain an imageshop field value
      * and format them into format with keys: 'rowId','rowUid','documentIds','fields' (contains all document data)
      *
-     * @return array 
+     * @return array
      **/
     public function getAllImageShopContentRows(): array
     {
@@ -121,32 +122,30 @@ class ImageShop extends Component
             ->select('*')
             ->from(Table::CONTENT);
 
-            
+
         foreach ($fields as $field) {
             $rowsQuery->andWhere(['not', [$field => null]]);
         }
-        // would be better to do this with something like JSON_CONTAINS but 
+        // would be better to do this with something like JSON_CONTAINS but
         // can't be certain about db driver or version on system.
 
         $rows = [];
-        foreach ($rowsQuery->all() as $value) {
+        foreach ($rowsQuery->each() as $value) {
             $row = [
                 'rowId' => $value['id'],
                 'rowUid' => $value['uid'],
                 'documentIds' => [],
                 'fields' => []
             ];
-            
+
             foreach ($fields as $field) {
                 if (array_key_exists($field,$value) && Json::isJsonObject($value[$field])) {
                     $fieldValue = Json::decode($value[$field]);
-                    //Craft::dd($fieldValue);
                     // deal with pre-allow multiple update
                     if (array_key_exists('documentId', $fieldValue)) {
                        $fieldValue = [$fieldValue];
                     }
-                    
-                    //Craft::dd($fieldValue);
+
                     foreach ($fieldValue as $v) {
                         $imageData = is_array($v) ? $v : Json::decodeIfJson($v);
                         $row['documentIds'][] = $imageData['documentId'];
@@ -163,14 +162,14 @@ class ImageShop extends Component
     /**
      * Updates the content of an imageshop field with data from the
      * recently updated cache
-     * 
+     *
      * @param array $config Details of the row to be updated, must contain 'rowId','rowUid' and 'documentId'
      **/
     public function updateContentRow(array $config): void
     {
         $fieldColumnNames = $this->getImageShopFields();
         $updatedDocuments = $this->getDocumentCache();
-        
+
         $rowsQuery = (new Query())
             ->select($fieldColumnNames)
             ->from(Table::CONTENT)
@@ -179,6 +178,10 @@ class ImageShop extends Component
                 'uid' => $config['rowUid']
             ])
             ->one();
+
+        if (!$rowsQuery) {
+            return;
+        }
 
         $newData = [];
         foreach ($fieldColumnNames as $columnName) {
@@ -191,7 +194,7 @@ class ImageShop extends Component
                 foreach ($oldData as $documentJson) {
                     $document = Json::decodeIfJson($documentJson);
                     if (array_key_exists($document['documentId'], $updatedDocuments)) {
-                        $newData[$columnName][] = $this->mapDocumentFields($document,$updatedDocuments[$document['documentId']]); 
+                        $newData[$columnName][] = $this->mapDocumentFields($document,$updatedDocuments[$document['documentId']]);
                     } else {
                         $newData[$columnName][] = $document;
                     }
@@ -205,20 +208,20 @@ class ImageShop extends Component
         Craft::$app->getDb()
             ->createCommand()
             ->update(
-                Table::CONTENT, 
-                $newData, 
+                Table::CONTENT,
+                $newData,
                 [
                     'id' => $config['rowId'],
                     'uid' => $config['rowUid']
                 ]
             )
             ->execute();
-        
+
         return;
     }
 
     /**
-     * Maps API data for sync to the stored field values, currently just alt-text
+     * Maps API data for sync to the stored field values
      *
      * @param array $dataFromPicker Data model that comes from the imageshop image picker pop up
      * @param array $dataFromApi Data model that comes from API during sync
@@ -226,15 +229,52 @@ class ImageShop extends Component
      **/
     public function mapDocumentFields(array $dataFromPicker, array $dataFromApi): array
     {
-        $settings = Plugin::getInstance()->getSettings();
-        $language = $settings->language;
-        // currently just alttext update
         $mapped = $dataFromPicker;
-        
-        if (array_key_exists($language,$mapped['text'])) {
-            $mapped['text'][$language]['altText'] = $dataFromApi['altText'];
+
+        // Build a lookup of API text data keyed by language
+        $apiTextByLang = [];
+        if (isset($dataFromApi['InterfaceList']) && is_array($dataFromApi['InterfaceList'])) {
+            foreach ($dataFromApi['InterfaceList'] as $iface) {
+                $lang = $this->sanitizeLanguage($iface['Language'] ?? '');
+                if ($lang) {
+                    $apiTextByLang[$lang] = $iface;
+                }
+            }
         }
-        
+
+        // Sync all text fields across all languages present in the picker data
+        if (isset($mapped['text']) && is_array($mapped['text'])) {
+            foreach ($mapped['text'] as $lang => &$textBlock) {
+                if (!isset($apiTextByLang[$lang])) {
+                    continue;
+                }
+                $apiText = $apiTextByLang[$lang];
+                $fieldMap = [
+                    'altText' => 'AltText',
+                    'description' => 'Description',
+                    'title' => 'Title',
+                    'credits' => 'Credits',
+                    'rights' => 'Rights',
+                    'tags' => 'Tags',
+                ];
+                foreach ($fieldMap as $pickerKey => $apiKey) {
+                    if (isset($apiText[$apiKey])) {
+                        $textBlock[$pickerKey] = $apiText[$apiKey];
+                    }
+                }
+            }
+            unset($textBlock);
+        }
+
+        // Also check flat altText for backwards compatibility
+        if (isset($dataFromApi['altText']) && isset($mapped['text'])) {
+            $settings = Plugin::getInstance()->getSettings();
+            $language = $this->sanitizeLanguage($settings->language);
+            if (isset($mapped['text'][$language]) && !isset($apiTextByLang[$language])) {
+                $mapped['text'][$language]['altText'] = $dataFromApi['altText'];
+            }
+        }
+
         return $mapped;
     }
 
@@ -246,16 +286,14 @@ class ImageShop extends Component
     public function updateRecentlyUpdatedCache(): void
     {
         $recentlyUpdatedIds = $this->_getRecentlyUpdated();
-        //Craft::dd($recentlyUpdatedIds);
         $imageShopDbRows = $this->getAllImageShopContentRows();
-        //Craft::dd($imageShopDbRows);
         $this->_getNewImageData($imageShopDbRows, $recentlyUpdatedIds);
     }
 
 
     /**
      * Creates the recently updated document cache using the getDocumentById API call
-     * 
+     *
      * @param array $dbRows data from content table row in the format 'rowId','rowUid','documentIds','fields' (contains all document data)
      * @param array $recentlyUpdatedIds Document Ids from the recently updated api call
      **/
@@ -265,7 +303,6 @@ class ImageShop extends Component
         $documentCache = [];
         $documentIds = $this->_getDocumentIdsFromImages($dbRows);
         $forUpdate = array_intersect($documentIds, $recentlyUpdatedIds);
-        //Craft::dd($forUpdate);
 
         if (count($forUpdate) === 0) {
             return;
@@ -273,12 +310,11 @@ class ImageShop extends Component
 
         foreach ($forUpdate as $documentId) {
             $documentCache[$documentId] = $this->getDocumentById($documentId,$settings->language);
-            //Craft::dd($documentCache[$documentId]);
         }
 
 
         $this->_setDocumentCache($documentCache);
-      
+
         return;
     }
 
@@ -290,15 +326,18 @@ class ImageShop extends Component
      **/
     private function _getDocumentIdsFromImages(array $images): array
     {
-        return array_unique(array_merge(...array_column($images,'documentIds')));
+        $columns = array_column($images, 'documentIds');
+        if (empty($columns)) {
+            return [];
+        }
+        return array_unique(array_merge(...$columns));
     }
 
     /**
-     * gets the recently updated documents from the imageshop API using the last time the 
+     * gets the recently updated documents from the imageshop API using the last time the
      * update was run as the date.
-     *     *
+     *
      * @return array Array of DocumentIds
-     * @throws conditon
      **/
     private function _getRecentlyUpdated(): array
     {
@@ -309,8 +348,8 @@ class ImageShop extends Component
                 ]
             ]);
         $ids = Json::decodeIfJson($response);
-        
-        return $ids;
+
+        return $ids ?? [];
     }
 
     /**
@@ -330,14 +369,6 @@ class ImageShop extends Component
         $total = count($contentRows);
 
         foreach ($contentRows as $row) {
-            
-            /*$this->updateContentRow([
-                'rowId' => $row['rowId'],
-                'rowUid' => $row['rowUid'],
-                'documentIds' => $row['documentIds'],
-                'fields' => $row['fields'],
-            ]);*/
-            
             Craft::$app->getQueue()->ttr(3600)->push(new Sync([
                 'rowId' => $row['rowId'],
                 'rowUid' => $row['rowUid'],
@@ -351,7 +382,7 @@ class ImageShop extends Component
     }
 
     /**
-     * sometimes the language code doesn't mnatch with the API, this tries to match the relevent one, or any.
+     * sometimes the language code doesn't match with the API, this tries to match the relevant one, or any.
      *
      * @param string $lang Language
      * @return string Sanitized language
@@ -368,30 +399,6 @@ class ImageShop extends Component
                 break;
         }
         return $lang;
-
-//        $settings = Plugin::getInstance()->getSettings();
-//        if (!$lang) {
-//            $settings = Plugin::$plugin->getSettings();
-//            switch ($settings->language) {
-//                case 'nb-NO':
-//                    $lang = 'no';
-//                    break;
-//
-//                case 'en-US':
-//                    $lang = 'en';
-//                    break;
-//
-//                default:
-//                    $lang = 'no';
-//                    break;
-//            }
-//        } else {
-//            if (!in_array($lang, ["no", "en", "sv"])) {
-//                $lang = "no";
-//            }
-//        }
-//
-//        return $lang;
     }
 
     /**
@@ -404,6 +411,7 @@ class ImageShop extends Component
         $query = (new Query())
             ->select('documentCache')
             ->from('{{%imageshop-dam_sync}}')
+            ->orderBy(['lastUpdated' => SORT_DESC])
             ->one();
 
         if (empty($query)) {
@@ -412,7 +420,7 @@ class ImageShop extends Component
 
         return Json::decodeIfJson($query['documentCache']);
     }
-        
+
     /**
      * writes the new document cache to the db
      *
@@ -425,6 +433,10 @@ class ImageShop extends Component
         Craft::$app->getDb()
             ->createCommand()
             ->upsert('{{%imageshop-dam_sync}}', [
+                'id' => 1,
+                'lastUpdated' => $lastUpdate,
+                'documentCache' => Json::encode($documentCache)
+            ], [
                 'lastUpdated' => $lastUpdate,
                 'documentCache' => Json::encode($documentCache)
             ])
@@ -443,6 +455,7 @@ class ImageShop extends Component
         $query = (new Query())
             ->select('lastUpdated')
             ->from('{{%imageshop-dam_sync}}')
+            ->orderBy(['lastUpdated' => SORT_DESC])
             ->one();
 
         return $query['lastUpdated'] ?? (new \DateTime('2000-01-01'))->format('m/d/Y h:i:s');
@@ -472,16 +485,19 @@ class ImageShop extends Component
                 'Content-Type' => 'application/xml'
             ]
         ]);
-        
-        $response = $client->request($method,$action,$params);
-        
-        if ($response->getStatusCode() == '200' && $response->hasHeader('Content-Length')) {
+
+        try {
+            $response = $client->request($method, $action, $params);
+        } catch (GuzzleException $e) {
+            Craft::error('ImageShop API request failed: ' . $e->getMessage(), __METHOD__);
+            return null;
+        }
+
+        if ($response->getStatusCode() == 200) {
             return $response->getBody()->getContents();
         }
 
         return null;
     }
-
-
 
 }

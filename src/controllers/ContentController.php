@@ -9,17 +9,10 @@ use webdna\imageshop\models\ImageShop as ImageShopModel;
 class ContentController extends Controller
 {
 
-    public $enableCsrfValidation = false;
-
     public function actionGetImageList()
     {
-        $user = Craft::$app->getUser()->getIdentity();
-        if (!$user || !$user->can('accessCp')) {
-            return $this->asJson([
-                'success' => false,
-                'error' => 'User does not have control panel access.',
-            ]);
-        }
+        $this->requirePostRequest();
+        $this->requirePermission('accessCp');
 
         // get data
         $request = Craft::$app->getRequest();

@@ -13,10 +13,8 @@ namespace webdna\imageshop;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
-use craft\events\PluginEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\services\Fields;
-use craft\services\Plugins;
 use craft\services\Utilities;
 use webdna\imageshop\fields\ImageShopField;
 use webdna\imageshop\models\Settings;
@@ -66,15 +64,6 @@ class ImageShop extends Plugin
             Fields::EVENT_REGISTER_FIELD_TYPES,
             function (RegisterComponentTypesEvent $event) {
                 $event->types[] = ImageShopField::class;
-            }
-        );
-
-        Event::on(
-            Plugins::class,
-            Plugins::EVENT_AFTER_INSTALL_PLUGIN,
-            function (PluginEvent $event) {
-                if ($event->plugin === $this) {
-                }
             }
         );
 

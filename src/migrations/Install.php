@@ -16,6 +16,7 @@ class Install extends Migration
     public function safeUp(): bool
     {
         $this->createTable('{{%imageshop-dam_sync}}', [
+            'id' => $this->primaryKey(),
             'lastUpdated' => $this->dateTime(),
             'documentCache' => $this->longText()
         ]);
