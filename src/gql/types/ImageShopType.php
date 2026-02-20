@@ -84,6 +84,15 @@ class ImageShopType
                 'type' => Type::string(),
                 'description' => 'The rights information for the image.',
             ],
+            'focalPoint' => [
+                'name' => 'focalPoint',
+                'type' => Type::string(),
+                'description' => 'The focal point as JSON with x/y percentages (0-100) for CSS object-position.',
+                'resolve' => function ($source) {
+                    $fp = $source->getFocalPoint();
+                    return $fp !== null ? json_encode($fp) : null;
+                },
+            ],
         ];
     }
 }

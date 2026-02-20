@@ -109,6 +109,91 @@ Note: Just like templating an assets field, the field will always return an arra
 
 
 
+### Focal Point
+
+The ImageShop picker lets editors set a focal point on images ("Lagre fokuspunkt"). The plugin exposes this as CSS-ready percentage values so that `object-fit: cover` crops around the subject instead of dead-center.
+
+`image.focalPoint` returns an object with `x` and `y` values (0–100, matching CSS `object-position` percentages), or `null` if no focal point has been set.
+
+#### Setting a focal point
+
+1. Open the ImageShop picker for an image in the control panel.
+2. Click the focal point button ("Lagre fokuspunkt") and click on the desired focus area.
+3. Save the entry — the focal point coordinates are stored alongside the image data.
+
+#### Basic usage
+
+```twig
+{% set image = entry.imageshopField|first %}
+{% set fp = image.focalPoint %}
+<img
+    src="{{ image.url }}"
+    alt="{{ image.getAltText() }}"
+    style="object-fit: cover;{% if fp %} object-position: {{ fp.x }}% {{ fp.y }}%{% endif %}"
+>
+```
+
+#### Multiple images
+
+```twig
+{% for image in entry.imageshopField %}
+    {% set fp = image.focalPoint %}
+    <img
+        src="{{ image.url }}"
+        alt="{{ image.getAltText() }}"
+        style="object-fit: cover;{% if fp %} object-position: {{ fp.x }}% {{ fp.y }}%{% endif %}"
+    >
+{% endfor %}
+```
+
+#### As a CSS class helper
+
+If you prefer keeping styles out of your markup, you can output a `<style>` block or use a CSS variable:
+
+```twig
+{% set image = entry.imageshopField|first %}
+{% set fp = image.focalPoint %}
+<img
+    class="hero-image"
+    src="{{ image.url }}"
+    alt="{{ image.getAltText() }}"
+    {% if fp %}style="--focal-x: {{ fp.x }}%; --focal-y: {{ fp.y }}%"{% endif %}
+>
+```
+
+```css
+.hero-image {
+    object-fit: cover;
+    object-position: var(--focal-x, 50%) var(--focal-y, 50%);
+}
+```
+
+#### GraphQL
+
+The `focalPoint` field is available in GraphQL queries and returns a JSON string with `x` and `y` percentages, or `null`:
+
+```graphql
+{
+    entries {
+        ... on blog_blog_Entry {
+            heroImage {
+                url
+                focalPoint
+            }
+        }
+    }
+}
+```
+
+Response:
+
+```json
+{
+    "url": "https://...",
+    "focalPoint": "{\"x\":35.8,\"y\":18.85}"
+}
+```
+
 ### Available attributes
 
 ```imageshopField``` is the name of the field in these examples.
@@ -122,6 +207,7 @@ Rights:         {{ entry.imageshopField.rights }}
 Description:    {{ entry.imageshopField.description }}
 Credit:         {{ entry.imageshopField.credits }}
 DocumentId:     {{ entry.imageshopField.documentId }}
+Focal Point:    {{ entry.imageshopField.focalPoint }}
 Raw:            {{ entry.imageshopField.json | json_encode(constant("JSON_PRETTY_PRINT")) }}
 ```
 

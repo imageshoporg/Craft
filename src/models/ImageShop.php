@@ -203,6 +203,18 @@ class ImageShop extends Model implements Serializable
         return $this->getCode();
     }
 
+    public function getFocalPoint(): ?array
+    {
+        if (!isset($this->_json['focalPoint']['x'], $this->_json['focalPoint']['y'])) {
+            return null;
+        }
+
+        return [
+            'x' => ($this->_json['focalPoint']['x'] + 1) * 50,
+            'y' => (1 - $this->_json['focalPoint']['y']) * 50,
+        ];
+    }
+
     public function getData(): ?string
     {
         return Json::encode($this->_json);
