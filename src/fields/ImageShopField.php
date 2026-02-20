@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -28,7 +28,7 @@ use GraphQL\Type\Definition\Type;
 
 /**
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 class ImageShopField extends Field
@@ -54,7 +54,7 @@ class ImageShopField extends Field
 
     public static function displayName(): string
     {
-        return Craft::t('imageshop-dam', 'ImageShop DAM');
+        return Craft::t('imageshop-dam', 'Imageshop DAM');
     }
 
     // Public Methods

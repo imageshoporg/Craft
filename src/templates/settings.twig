@@ -1,14 +1,14 @@
 {# @var craft \craft\web\twig\variables\CraftVariable #}
 {#
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Settings.twig
+ * Imageshop Settings.twig
  *
  * @author    WebDNA
  * @copyright Copyright (c) 2022 WebDNA
  * @link      https://webdna.co.uk
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 #}
@@ -55,7 +55,7 @@
 
 {{ forms.selectField({
     label: 'Imageshop field used to generate opengraph image'|t,
-    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using ImageShop. The first image from the field will be used.',
+    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.',
     id: 'openGraphFieldId',
     name: 'openGraphFieldId',
     options: settings.getOpengraphFieldOptions(),

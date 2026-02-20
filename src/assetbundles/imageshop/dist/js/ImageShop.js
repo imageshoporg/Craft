@@ -1,13 +1,13 @@
 /**
- * ImageShop plugin for Craft CMS
+ * Imageshop plugin for Craft CMS
  *
  * ImageShopField Field JS
  *
  * @author    WebDNA
  * @copyright Copyright (c) 2022 WebDNA
  * @link      https://webdna.co.uk
- * @package   ImageShop
- * @since     2.0.0ImageShop
+ * @package   Imageshop
+ * @since     2.0.0
  */
 
 (function ($) {

@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 4.x
+ * Imageshop plugin for Craft CMS 4.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -26,7 +26,7 @@ use yii\base\Event;
  * Class ImageShop
  *
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  *
  * @property  ImageShopServiceService $imageShopService

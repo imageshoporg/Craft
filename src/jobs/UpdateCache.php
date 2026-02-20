@@ -19,6 +19,6 @@ class UpdateCache extends BaseJob
 
     protected function defaultDescription(): ?string
     {
-        return "Getting recently changed ImageShop Dam documents";
+        return "Getting recently changed Imageshop DAM documents";
     }
 }

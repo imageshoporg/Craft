@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -19,7 +19,7 @@ use craft\helpers\Json;
 
 /**
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 class ImageShop extends Model implements Serializable

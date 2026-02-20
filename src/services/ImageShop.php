@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -27,7 +27,7 @@ use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 class ImageShop extends Component
@@ -489,7 +489,7 @@ class ImageShop extends Component
         try {
             $response = $client->request($method, $action, $params);
         } catch (GuzzleException $e) {
-            Craft::error('ImageShop API request failed: ' . $e->getMessage(), __METHOD__);
+            Craft::error('Imageshop API request failed: ' . $e->getMessage(), __METHOD__);
             return null;
         }
 

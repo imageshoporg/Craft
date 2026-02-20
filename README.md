@@ -37,13 +37,13 @@ php craft plugin/install imageshop-dam
 
 - You will now have access to the "Imageshop" in the Field type dropdown on the field creation page.
 
-## ImageShop DAM field
+## Imageshop DAM field
 
-To retrieve images from the ImageShop service, you must first create an ImageShop DAM field and assign it to an entry or any another element. The field can hold multiple images and images can be reordered within the field by dragging the grab‑icon that appears in the top‑left corner of each image.
+To retrieve images from the Imageshop service, you must first create an Imageshop DAM field and assign it to an entry or any another element. The field can hold multiple images and images can be reordered within the field by dragging the grab‑icon that appears in the top‑left corner of each image.
 
-In addition to the image itself, metadata such as the image title and alt text are pulled from the service. This texts exists in several languages, and the plugin displays the appropriate version based on the site’s current language. If current site language content was not present in data pulled from service, default language content will be used. Important: Because of technical constraints, the ImageShop field must now be set to translatable.
+In addition to the image itself, metadata such as the image title and alt text are pulled from the service. This texts exists in several languages, and the plugin displays the appropriate version based on the site’s current language. If current site language content was not present in data pulled from service, default language content will be used. Important: Because of technical constraints, the Imageshop field must now be set to translatable.
 
-You can override the image description and alt text by clicking the cog icon that appears in the top‑left corner when you hover over an image in the control panel. Doing so reveals the override input fields. This works for all languages, and you can also provide descriptions and alt text for languages that were not originally available in the ImageShop service.
+You can override the image description and alt text by clicking the cog icon that appears in the top‑left corner when you hover over an image in the control panel. Doing so reveals the override input fields. This works for all languages, and you can also provide descriptions and alt text for languages that were not originally available in the Imageshop service.
 
 ## Templating:
 
@@ -111,13 +111,13 @@ Note: Just like templating an assets field, the field will always return an arra
 
 ### Focal Point
 
-The ImageShop picker lets editors set a focal point on images ("Lagre fokuspunkt"). The plugin exposes this as CSS-ready percentage values so that `object-fit: cover` crops around the subject instead of dead-center.
+The Imageshop picker lets editors set a focal point on images ("Lagre fokuspunkt"). The plugin exposes this as CSS-ready percentage values so that `object-fit: cover` crops around the subject instead of dead-center.
 
 `image.focalPoint` returns an object with `x` and `y` values (0–100, matching CSS `object-position` percentages), or `null` if no focal point has been set.
 
 #### Setting a focal point
 
-1. Open the ImageShop picker for an image in the control panel.
+1. Open the Imageshop picker for an image in the control panel.
 2. Click the focal point button ("Lagre fokuspunkt") and click on the desired focus area.
 3. Save the entry — the focal point coordinates are stored alongside the image data.
 
@@ -235,24 +235,24 @@ An Imageshop field can be used as the source for OpenGraph and Twitter Card imag
 
 ### Setup
 
-1. Go to **Settings -> Plugins -> ImageShop DAM** in the control panel.
-2. Under **”Imageshop field used to generate OpenGraph image”**, select the ImageShop field that should provide the image (e.g. your “Hero Image” field).
+1. Go to **Settings -> Plugins -> Imageshop DAM** in the control panel.
+2. Under **”Imageshop field used to generate OpenGraph image”**, select the Imageshop field that should provide the image (e.g. your “Hero Image” field).
 3. The selected field must be assigned to the field layout of the element types (Entries, Categories, etc.) where you want the OpenGraph image to appear. The first image from the field will be used.
 
 ### Default / fallback image
 
 You can configure a fallback image that is used when:
-- The ImageShop field on the current element is empty
-- The element does not have the configured ImageShop field in its field layout
+- The Imageshop field on the current element is empty
+- The element does not have the configured Imageshop field in its field layout
 - No element is associated with the current page
 
 To set a fallback:
-1. In the ImageShop plugin settings, under **”Global set which will be used as source for the default OpenGraph image”**, select a Global Set.
-2. Make sure the same ImageShop field (from step 2 above) is assigned to that Global Set's field layout and has an image selected.
+1. In the Imageshop plugin settings, under **”Global set which will be used as source for the default OpenGraph image”**, select a Global Set.
+2. Make sure the same Imageshop field (from step 2 above) is assigned to that Global Set's field layout and has an image selected.
 
 ### What gets set
 
-When an ImageShop image is found, the following SEOmatic meta tags are set automatically:
+When an Imageshop image is found, the following SEOmatic meta tags are set automatically:
 
 | Meta tag | Value |
 |----------|-------|
@@ -263,4 +263,4 @@ When an ImageShop image is found, the following SEOmatic meta tags are set autom
 
 ### CP preview
 
-The **SEO Preview** sidebar in the entry editor will show the ImageShop image in the Twitter and Facebook card previews, so editors can verify the social sharing appearance before publishing.
+The **SEO Preview** sidebar in the entry editor will show the Imageshop image in the Twitter and Facebook card previews, so editors can verify the social sharing appearance before publishing.

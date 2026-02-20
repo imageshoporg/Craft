@@ -1,7 +1,7 @@
 {
     "name": "webdna/imageshop-dam",
     "version": "2.3.0",
-    "description": "ImageShop DAM Integration for CraftCMS",
+    "description": "Imageshop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
         "craft",
@@ -30,7 +30,7 @@
         }
     },
     "extra": {
-        "name": "ImageShop",
+        "name": "Imageshop",
         "handle": "imageshop-dam",
         "developer": "WebDNA",
         "developerUrl": "https://webdna.co.uk",

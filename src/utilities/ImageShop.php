@@ -13,7 +13,7 @@ class ImageShop extends Utility
 {
     public static function displayName(): string
     {
-        return Craft::t('imageshop-dam', 'ImageShop');
+        return Craft::t('imageshop-dam', 'Imageshop');
     }
 
     static function id(): string

@@ -22,7 +22,7 @@ class ImageShopType
         return GqlEntityRegistry::createEntity(self::class, new ObjectType([
             'name'   => static::getName(),
             'fields' => self::class . '::getFieldDefinitions',
-            'description' => 'The interface implemented by all ImageShop types.',
+            'description' => 'The interface implemented by all Imageshop types.',
         ]));
     }
 
