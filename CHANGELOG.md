@@ -10,9 +10,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `focalPoint` field in GraphQL type, returning JSON with `x`/`y` percentages.
 - `altText` field in GraphQL type.
 - Documentation for focal point usage in Twig templates and GraphQL.
+- High-quality image permalink endpoint (`/actions/imageshop-dam/permalink/get-hq-url`) for fetching larger resolution images on-demand via the Imageshop Permalink API. Useful for lightbox/modal popups.
+- `getPermalink()` service method for generating permanent CDN URLs at any resolution.
+- Documentation for the permalink endpoint and gallery lightbox usage pattern.
 
 ### Fixed
 - SEOmatic OpenGraph/Twitter image integration now works correctly. The matched element is resolved inside the event handler instead of at plugin init time, where routing hasn't completed yet. Image dimensions and alt text are now also set on the meta tags.
+- Fixed "Attempt to assign property on null" error when SEOmatic meta object is not initialized on pages without a matched element (e.g. listing pages).
 - SEOmatic CP sidebar preview (SEO Preview) now shows the Imageshop image in the Twitter and Facebook card previews.
 - GraphQL queries now return text in the correct site language instead of always using the current site's language.
 - `allowMultiple` setting is now enforced — single-image fields no longer accumulate extra images when the picker is opened repeatedly.
