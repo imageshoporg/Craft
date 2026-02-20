@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Documentation for focal point usage in Twig templates and GraphQL.
 
 ### Fixed
+- SEOmatic OpenGraph/Twitter image integration now works correctly. The matched element is resolved inside the event handler instead of at plugin init time, where routing hasn't completed yet. Image dimensions and alt text are now also set on the meta tags.
+- SEOmatic CP sidebar preview (SEO Preview) now shows the ImageShop image in the Twitter and Facebook card previews.
 - GraphQL queries now return text in the correct site language instead of always using the current site's language.
 - `allowMultiple` setting is now enforced — single-image fields no longer accumulate extra images when the picker is opened repeatedly.
 - Sync job uses correct field column names.

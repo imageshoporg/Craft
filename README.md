@@ -225,13 +225,42 @@ This is useful in two situations:
 
 * When you want to override any manual changes made to images (for example, manually edited alt text).
 
-## Using Imageshop Field as an OpenGraph Image Source
+## Using Imageshop Field as an OpenGraph Image Source (SEOmatic)
 
-An Imageshop field can be used as the source for the OpenGraph image in the SEOmatic plugin.
-To enable this functionality, first define which field should be used as the image source in the Imageshop plugin settings, under “Imageshop field used to generate OpenGraph image.”
+An Imageshop field can be used as the source for OpenGraph and Twitter Card images via the [SEOmatic](https://plugins.craftcms.com/seomatic) plugin. When configured, the plugin automatically sets `og:image`, `twitter:image`, and `seo:image` meta tags, including image dimensions and alt text.
 
-This field must be assigned to the field layout of the specific element type - for example, an Entry, Category, User, Product, or any other element - for which you want to override the OpenGraph image. The first image from this field will be used.
+### Requirements
 
-You can also define a default OpenGraph image. This image will be used when the ImageShop field assigned to the current element is empty, when no ImageShop field is assigned at all, or when no element s associated with specific page.
+- SEOmatic plugin must be installed and enabled.
 
-To enable this behavior, select Global in the “Global set which will be used as source for the default opengraph image.” setting and ensure that a field that is specified in “ImageShop field used to generate OpenGraph image.” setting is assigned to the global set.
+### Setup
+
+1. Go to **Settings -> Plugins -> ImageShop DAM** in the control panel.
+2. Under **”Imageshop field used to generate OpenGraph image”**, select the ImageShop field that should provide the image (e.g. your “Hero Image” field).
+3. The selected field must be assigned to the field layout of the element types (Entries, Categories, etc.) where you want the OpenGraph image to appear. The first image from the field will be used.
+
+### Default / fallback image
+
+You can configure a fallback image that is used when:
+- The ImageShop field on the current element is empty
+- The element does not have the configured ImageShop field in its field layout
+- No element is associated with the current page
+
+To set a fallback:
+1. In the ImageShop plugin settings, under **”Global set which will be used as source for the default OpenGraph image”**, select a Global Set.
+2. Make sure the same ImageShop field (from step 2 above) is assigned to that Global Set's field layout and has an image selected.
+
+### What gets set
+
+When an ImageShop image is found, the following SEOmatic meta tags are set automatically:
+
+| Meta tag | Value |
+|----------|-------|
+| `og:image` / `twitter:image` | Image URL |
+| `og:image:width` / `twitter:image:width` | Image width (if available) |
+| `og:image:height` / `twitter:image:height` | Image height (if available) |
+| `og:image:alt` / `twitter:image:alt` | Alt text for the current site language |
+
+### CP preview
+
+The **SEO Preview** sidebar in the entry editor will show the ImageShop image in the Twitter and Facebook card previews, so editors can verify the social sharing appearance before publishing.

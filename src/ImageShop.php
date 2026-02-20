@@ -85,7 +85,7 @@ class ImageShop extends Plugin
 
     }
 
-    public function getOpenGraphPictureForElement($element)
+    public function getOpenGraphImageForElement($element): ?\webdna\imageshop\models\ImageShop
     {
         if(!$element){
             return null;
@@ -95,7 +95,6 @@ class ImageShop extends Plugin
         if(!is_int($this->getSettings()->openGraphFieldId)){
             return null;
         }
-
 
         $field = Craft::$app->fields->getFieldById($this->getSettings()->openGraphFieldId);
         if(is_null($field)){
@@ -139,11 +138,11 @@ class ImageShop extends Plugin
         }
 
         // if contains image
-        $imageUrl = $imageObj->getUrl();
-        if(empty($imageUrl)){
+        if(empty($imageObj->getUrl())){
             return null;
         }
-        return $imageUrl;
+
+        return $imageObj;
     }
 
     public function seomaticEvents()
@@ -153,38 +152,77 @@ class ImageShop extends Plugin
             return;
         }
 
-        // if current element
-        $currentElement = Craft::$app->urlManager->getMatchedElement();
-        $url = $this->getOpenGraphPictureForElement($currentElement);
-
-        if(is_null($url)){
-            $url = $this->getGlobalOgUrl();
-            if(is_null($url)){
-                return;
-            }
-        }
-
+        // For frontend requests: fires during normal page rendering
         Event::on(
             \nystudio107\seomatic\helpers\DynamicMeta::class,
             \nystudio107\seomatic\helpers\DynamicMeta::EVENT_ADD_DYNAMIC_META,
-            function(\nystudio107\seomatic\events\AddDynamicMetaEvent $event) use($url) {
-                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->twitterImage = $url;
-                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->ogImage = $url;
-                \nystudio107\seomatic\Seomatic::$seomaticVariable->meta->seoImage = $url;
+            function(\nystudio107\seomatic\events\AddDynamicMetaEvent $event) {
+                $this->applySeomaticImage();
             }
         );
 
+        // For CP preview: EVENT_ADD_DYNAMIC_META doesn't fire during the CP
+        // sidebar preview, so inject the image before the preview template renders
+        Event::on(
+            \craft\web\View::class,
+            \craft\web\View::EVENT_BEFORE_RENDER_TEMPLATE,
+            function(\craft\events\TemplateEvent $event) {
+                if (strpos($event->template, 'seomatic/_sidebars/') === 0
+                    && \nystudio107\seomatic\Seomatic::$matchedElement
+                ) {
+                    $this->applySeomaticImage();
+                }
+            }
+        );
     }
 
-    public function getGlobalOgUrl()
+    private function applySeomaticImage(): void
+    {
+        $currentElement = \nystudio107\seomatic\Seomatic::$matchedElement;
+
+        $image = $this->getOpenGraphImageForElement($currentElement);
+
+        if(is_null($image)){
+            $image = $this->getGlobalOgImage();
+        }
+
+        if(is_null($image)){
+            return;
+        }
+
+        $url = $image->getUrl();
+        $meta = \nystudio107\seomatic\Seomatic::$seomaticVariable->meta;
+
+        $meta->seoImage = $url;
+        $meta->ogImage = $url;
+        $meta->twitterImage = $url;
+
+        $width = $image->getWidth();
+        $height = $image->getHeight();
+        if($width){
+            $meta->ogImageWidth = $width;
+            $meta->twitterImageWidth = $width;
+        }
+        if($height){
+            $meta->ogImageHeight = $height;
+            $meta->twitterImageHeight = $height;
+        }
+
+        $altText = $image->getAltText();
+        if($altText){
+            $meta->ogImageDescription = $altText;
+            $meta->twitterImageDescription = $altText;
+        }
+    }
+
+    public function getGlobalOgImage(): ?\webdna\imageshop\models\ImageShop
     {
         $globalId = $this->getSettings()->openGraphGlobalId;
         if(!is_int($globalId)){
             return null;
         }
         $global = Craft::$app->globals->getSetById($globalId);
-        $url = $this->getOpenGraphPictureForElement($global);
-        return $url;
+        return $this->getOpenGraphImageForElement($global);
     }
 
     // Protected Methods
