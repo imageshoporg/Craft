@@ -16,8 +16,8 @@
 {% import "_includes/forms" as forms %}
 
 {{ forms.autosuggestField({
-    label: 'Token'|t,
-    instructions: 'Imageshop token',
+    label: 'Token'|t('imageshop-dam'),
+    instructions: 'Imageshop token'|t('imageshop-dam'),
     id: 'token',
     name: 'token',
     suggestEnvVars: true,
@@ -26,8 +26,8 @@
 }}
 
 {{ forms.autosuggestField({
-    label: 'Key'|t,
-    instructions: 'Imageshop private key',
+    label: 'Key'|t('imageshop-dam'),
+    instructions: 'Imageshop private key'|t('imageshop-dam'),
     id: 'key',
     name: 'key',
     suggestEnvVars: true,
@@ -37,16 +37,16 @@
 
 {% set languages = [
   {
-    label: 'Norwegian'|t,
+    label: 'Norwegian'|t('imageshop-dam'),
     value: 'nb-NO'
   }, {
-    label: 'English'|t,
+    label: 'English'|t('imageshop-dam'),
     value: 'en-US'
   }
 ] %}
 
 {{ forms.selectField({
-    label: 'Language'|t,
+    label: 'Language'|t('imageshop-dam'),
     id: 'language',
     name: 'language',
     options: languages,
@@ -54,8 +54,8 @@
 }}
 
 {{ forms.selectField({
-    label: 'Imageshop field used to generate opengraph image'|t,
-    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.',
+    label: 'Imageshop field used to generate opengraph image'|t('imageshop-dam'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.'|t('imageshop-dam'),
     id: 'openGraphFieldId',
     name: 'openGraphFieldId',
     options: settings.getOpengraphFieldOptions(),
@@ -63,8 +63,8 @@
 }}
 
 {{ forms.selectField({
-    label: 'Global set which will be used as source for the default opengraph image.'|t,
-    instructions: 'This will work only if the SEOmatic plugin is installed. This global must have imageshop field assigned nd will be used only of current element does not have its own specific opengraph defined by its imagshop field.',
+    label: 'Global set which will be used as source for the default opengraph image.'|t('imageshop-dam'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. This global must have imageshop field assigned and will be used only if current element does not have its own specific opengraph defined by its Imageshop field.'|t('imageshop-dam'),
     id: 'openGraphGlobalId',
     name: 'openGraphGlobalId',
     options: settings.getOpengraphGlobalOptions(),

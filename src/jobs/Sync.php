@@ -34,6 +34,9 @@ class Sync extends BaseJob
 
     protected function defaultDescription(): ?string
     {
-        return "Re-syncing imageshop data {$this->index} of {$this->count}";
+        return Craft::t('imageshop-dam', 'Re-syncing imageshop data {index} of {count}', [
+            'index' => $this->index,
+            'count' => $this->count,
+        ]);
     }
 }

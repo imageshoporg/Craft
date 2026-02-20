@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - High-quality image permalink endpoint (`/actions/imageshop-dam/permalink/get-hq-url`) for fetching larger resolution images on-demand via the Imageshop Permalink API. Useful for lightbox/modal popups.
 - `getPermalink()` service method for generating permanent CDN URLs at any resolution.
 - Documentation for the permalink endpoint and gallery lightbox usage pattern.
+- Full Norwegian (Bokmål) translations for all plugin UI: settings page, field settings, field input labels, utility page, and queue job descriptions.
+- Added `|t('imageshop-dam')` translation filters to all plugin templates (settings, field settings, field input) to enable localization.
 
 ### Fixed
 - SEOmatic OpenGraph/Twitter image integration now works correctly. The matched element is resolved inside the event handler instead of at plugin init time, where routing hasn't completed yet. Image dimensions and alt text are now also set on the meta tags.
@@ -21,6 +23,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - GraphQL queries now return text in the correct site language instead of always using the current site's language.
 - `allowMultiple` setting is now enforced — single-image fields no longer accumulate extra images when the picker is opened repeatedly.
 - Sync job uses correct field column names.
+- Fixed swapped descriptions for "Show Crop Dialogue" and "Show Size Dialogue" field settings.
+- Renamed "Show Description?" to "Edit description before insert?" with a clearer description.
+- Fixed duplicate `title` attribute on reorder icon in field input.
+- Fixed typos in OpenGraph global settings instructions.
 
 ### Changed
 - Added CSRF validation and POST method enforcement on controller actions.
@@ -30,6 +36,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Removed unused `UpdateFields` job and orphaned migration.
 - Removed empty `EVENT_AFTER_INSTALL_PLUGIN` handler.
 - Standardized branding from "ImageShop" to "Imageshop" across all display text, documentation, and translations.
+- Reduced default permalink image width from 3840px to 1920px for faster loading.
 
 ## 2.3.0 - 2025-11-11
 ### Added

@@ -14,7 +14,7 @@ class PermalinkController extends Controller
     {
         $request = Craft::$app->getRequest();
         $documentId = (int) $request->getRequiredParam('documentId');
-        $width = (int) ($request->getParam('width') ?: 3840);
+        $width = (int) ($request->getParam('width') ?: 1920);
         $height = (int) ($request->getParam('height') ?: 0);
 
         if ($documentId <= 0) {
