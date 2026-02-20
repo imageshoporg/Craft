@@ -462,6 +462,32 @@ class ImageShop extends Component
     }
 
     /**
+     * Gets a permanent CDN URL for a document at a specific size.
+     *
+     * @param int $documentId Document Id
+     * @param int $width Desired width (0 for auto)
+     * @param int $height Desired height (0 for auto)
+     * @return ?string The permanent image URL
+     **/
+    public function getPermalink(int $documentId, int $width = 0, int $height = 0): ?string
+    {
+        $response = $this->_request('GET', '/Permalink/CreatePermaLinkFromDocumentId', [
+            'query' => [
+                'documentid' => $documentId,
+                'width' => $width,
+                'height' => $height,
+            ]
+        ]);
+
+        if (!$response || !Json::isJsonObject($response)) {
+            return null;
+        }
+
+        $data = Json::decode($response);
+        return $data['url'] ?? null;
+    }
+
+    /**
      * base api call helper
      *
      * @param string $method default GET

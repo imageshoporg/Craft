@@ -264,3 +264,95 @@ When an Imageshop image is found, the following SEOmatic meta tags are set autom
 ### CP preview
 
 The **SEO Preview** sidebar in the entry editor will show the Imageshop image in the Twitter and Facebook card previews, so editors can verify the social sharing appearance before publishing.
+
+## High-Quality Image Permalinks
+
+The plugin provides an API endpoint for generating high-quality image URLs on-demand via the Imageshop Permalink API. This is useful for lightbox/modal popups where you want to show a higher resolution version than the default field image.
+
+### How it works
+
+Imageshop fields store images at the resolution configured in the field settings (e.g. 1920px wide). The permalink endpoint lets you request a larger version (default 3840px) from the Imageshop CDN, returning a permanent URL.
+
+### Endpoint
+
+```
+GET /actions/imageshop-dam/permalink/get-hq-url
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `documentId` | integer | Yes | — | The Imageshop document ID (`image.documentId`) |
+| `width` | integer | No | 3840 | Desired image width in pixels |
+| `height` | integer | No | 0 | Desired image height (0 = auto/proportional) |
+
+Returns JSON:
+```json
+{"url": "https://v.imgi.no/..."}
+```
+
+This endpoint is publicly accessible (no authentication required) and is designed to be called from frontend JavaScript.
+
+### Example: Gallery with lightbox
+
+This example shows a gallery grid with thumbnail-quality images. When an image is clicked, the stored image is shown immediately in a modal, and a high-quality version is fetched in the background and swapped in once loaded.
+
+```twig
+{# Render the gallery grid #}
+<div class="gallery">
+    {% for img in entry.galleryField %}
+        <figure data-index="{{ loop.index0 }}">
+            <img src="{{ img.url }}" alt="{{ img.getAltText() }}">
+        </figure>
+    {% endfor %}
+</div>
+
+{# Modal markup #}
+<div class="lightbox" id="lightbox" style="display:none">
+    <img id="lightbox-img" src="" alt="">
+</div>
+
+{# Pass image data to JS including documentId for HQ fetching #}
+{% js %}
+var images = {{ entry.galleryField|map(img => {
+    url: img.url,
+    documentId: img.documentId,
+    alt: img.getAltText() ?? ''
+})|json_encode|raw }};
+
+var hqCache = {};
+
+document.querySelectorAll('.gallery figure').forEach(function(fig) {
+    fig.addEventListener('click', function() {
+        var i = parseInt(this.dataset.index);
+        var img = images[i];
+        var lbImg = document.getElementById('lightbox-img');
+
+        // Show stored image immediately
+        lbImg.src = img.url;
+        document.getElementById('lightbox').style.display = 'flex';
+
+        // Fetch and swap in HQ version
+        if (img.documentId && !hqCache[img.documentId]) {
+            fetch('/actions/imageshop-dam/permalink/get-hq-url?documentId=' + img.documentId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.url) {
+                        hqCache[img.documentId] = data.url;
+                        var preload = new Image();
+                        preload.onload = function() { lbImg.src = data.url; };
+                        preload.src = data.url;
+                    }
+                });
+        } else if (hqCache[img.documentId]) {
+            lbImg.src = hqCache[img.documentId];
+        }
+    });
+});
+{% endjs %}
+```
+
+Key points:
+- The `documentId` attribute on each image model provides the ID needed for the API call.
+- HQ URLs are cached client-side so repeat views don't re-fetch.
+- The stored image is shown instantly while the HQ version loads in the background — users see no delay.
+- The default 3840px width produces images roughly 3x larger in file size than the typical 1920px field image, providing noticeably sharper detail in fullscreen/modal views.

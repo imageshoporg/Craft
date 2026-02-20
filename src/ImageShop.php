@@ -191,7 +191,11 @@ class ImageShop extends Plugin
         }
 
         $url = $image->getUrl();
-        $meta = \nystudio107\seomatic\Seomatic::$seomaticVariable->meta;
+        $meta = \nystudio107\seomatic\Seomatic::$seomaticVariable->meta ?? null;
+
+        if (is_null($meta)) {
+            return;
+        }
 
         $meta->seoImage = $url;
         $meta->ogImage = $url;
