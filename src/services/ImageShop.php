@@ -462,6 +462,25 @@ class ImageShop extends Component
     }
 
     /**
+     * Gets a cached permanent CDN URL for a document at a specific size.
+     *
+     * @param int $documentId Document Id
+     * @param int $width Desired width (0 for auto)
+     * @param int $height Desired height (0 for auto)
+     * @return ?string The permanent image URL
+     **/
+    public function getCachedPermalink(int $documentId, int $width = 0, int $height = 0): ?string
+    {
+        $cacheKey = "imageshop_permalink_{$documentId}_{$width}_{$height}";
+
+        $url = Craft::$app->getCache()->getOrSet($cacheKey, function () use ($documentId, $width, $height) {
+            return $this->getPermalink($documentId, $width, $height) ?? false;
+        }, 60 * 60 * 24 * 30); // 30 days
+
+        return $url ?: null;
+    }
+
+    /**
      * Gets a permanent CDN URL for a document at a specific size.
      *
      * @param int $documentId Document Id

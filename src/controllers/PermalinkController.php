@@ -21,7 +21,7 @@ class PermalinkController extends Controller
             return $this->asJson(['error' => 'Invalid documentId']);
         }
 
-        $url = ImageShop::getInstance()->service->getPermalink($documentId, $width, $height);
+        $url = ImageShop::getInstance()->service->getCachedPermalink($documentId, $width, $height);
 
         if (!$url) {
             return $this->asJson(['error' => 'Could not generate permalink']);

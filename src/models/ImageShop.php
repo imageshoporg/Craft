@@ -215,6 +215,35 @@ class ImageShop extends Model implements Serializable
         ];
     }
 
+    public function getResizedUrl(int $width, int $height = 0): ?string
+    {
+        $documentId = $this->getDocumentId();
+        if (!$documentId) {
+            return $this->getUrl();
+        }
+
+        $url = Plugin::getInstance()->service->getCachedPermalink((int)$documentId, $width, $height);
+        return $url ?? $this->getUrl();
+    }
+
+    public function getSrcset(array $widths = [480, 960, 1920]): ?string
+    {
+        $documentId = $this->getDocumentId();
+        if (!$documentId) {
+            return null;
+        }
+
+        $parts = [];
+        foreach ($widths as $w) {
+            $url = Plugin::getInstance()->service->getCachedPermalink((int)$documentId, (int)$w);
+            if ($url) {
+                $parts[] = $url . ' ' . $w . 'w';
+            }
+        }
+
+        return !empty($parts) ? implode(', ', $parts) : null;
+    }
+
     public function getData(): ?string
     {
         return Json::encode($this->_json);

@@ -84,6 +84,26 @@ class ImageShopType
                 'type' => Type::string(),
                 'description' => 'The rights information for the image.',
             ],
+            'resizedUrl' => [
+                'name' => 'resizedUrl',
+                'type' => Type::string(),
+                'description' => 'A resized image URL at the specified dimensions.',
+                'args' => [
+                    'width' => [
+                        'type' => Type::nonNull(Type::int()),
+                        'description' => 'Desired width in pixels.',
+                    ],
+                    'height' => [
+                        'type' => Type::int(),
+                        'description' => 'Desired height in pixels (0 for auto).',
+                    ],
+                ],
+                'resolve' => function ($source, array $args) {
+                    $width = $args['width'];
+                    $height = $args['height'] ?? 0;
+                    return $source->getResizedUrl($width, $height);
+                },
+            ],
             'focalPoint' => [
                 'name' => 'focalPoint',
                 'type' => Type::string(),
