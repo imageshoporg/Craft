@@ -162,12 +162,14 @@ class ImageShop extends Plugin
         );
 
         // For CP preview: EVENT_ADD_DYNAMIC_META doesn't fire during the CP
-        // sidebar preview, so inject the image before the preview template renders
+        // sidebar preview or social media preview, so inject the image before
+        // the preview template renders
         Event::on(
             \craft\web\View::class,
             \craft\web\View::EVENT_BEFORE_RENDER_TEMPLATE,
             function(\craft\events\TemplateEvent $event) {
-                if (strpos($event->template, 'seomatic/_sidebars/') === 0
+                if ((strpos($event->template, 'seomatic/_sidebars/') === 0
+                        || strpos($event->template, 'seomatic/_frontend/preview/') === 0)
                     && \nystudio107\seomatic\Seomatic::$matchedElement
                 ) {
                     $this->applySeomaticImage();
