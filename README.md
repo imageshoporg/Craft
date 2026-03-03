@@ -170,14 +170,45 @@ If you prefer keeping styles out of your markup, you can output a `<style>` bloc
 
 #### GraphQL
 
-The `focalPoint` field is available in GraphQL queries and returns a JSON string with `x` and `y` percentages, or `null`:
+The `focalPoint` field is available in GraphQL queries — see the [GraphQL](#graphql) section for the full field reference.
+
+## GraphQL
+
+The Imageshop field is fully available through Craft's GraphQL API. All text metadata fields resolve to the correct language based on the queried site.
+
+### Available fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | `String` | Full image URL |
+| `altText` | `String` | Alt text for the current site language |
+| `description` | `String` | Image description for the current site language |
+| `title` | `String` | Image title for the current site language |
+| `credits` | `String` | Credits/attribution for the current site language |
+| `rights` | `String` | Rights/licensing info for the current site language |
+| `tags` | `[String]` | Tags for the current site language |
+| `width` | `String` | Image width |
+| `height` | `String` | Image height |
+| `code` | `String` | Image code |
+| `documentId` | `String` | Imageshop document ID |
+| `data` | `String` | Raw JSON data |
+| `resizedUrl(width: Int!, height: Int)` | `String` | Resized CDN URL at the given dimensions |
+| `focalPoint` | `String` | JSON with `x`/`y` percentages (0–100), or `null` |
+
+### Example query
 
 ```graphql
 {
-    entries {
-        ... on blog_blog_Entry {
+    entries(site: "english", section: "blog") {
+        title
+        ... on blog_default_Entry {
             heroImage {
                 url
+                altText
+                description
+                credits
+                tags
+                resizedUrl(width: 960)
                 focalPoint
             }
         }
@@ -185,12 +216,22 @@ The `focalPoint` field is available in GraphQL queries and returns a JSON string
 }
 ```
 
-Response:
+### Multi-site language resolution
 
-```json
+When you query entries for a specific site (e.g. `site: "norwegian"`), all text fields automatically return content in that site's language. No extra arguments are needed — the language is determined by the site context of the query.
+
+```graphql
 {
-    "url": "https://...",
-    "focalPoint": "{\"x\":35.8,\"y\":18.85}"
+    en: entries(site: "english", section: "blog", limit: 1) {
+        ... on blog_default_Entry {
+            heroImage { altText }  # Returns English alt text
+        }
+    }
+    no: entries(site: "norwegian", section: "blog", limit: 1) {
+        ... on blog_default_Entry {
+            heroImage { altText }  # Returns Norwegian alt text
+        }
+    }
 }
 ```
 
