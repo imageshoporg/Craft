@@ -38,11 +38,17 @@ class ImageShopType
                 'name' => 'credits',
                 'type' => Type::string(),
                 'description' => 'The credits for the image.',
+                'resolve' => function ($source) {
+                    return $source->getCredits();
+                },
             ],
             'description' => [
                 'name' => 'description',
                 'type' => Type::string(),
                 'description' => 'The description of the image.',
+                'resolve' => function ($source) {
+                    return $source->getDescription();
+                },
             ],
             'data' => [
                 'name' => 'data',
@@ -53,11 +59,17 @@ class ImageShopType
                 'name' => 'title',
                 'type' => Type::string(),
                 'description' => 'The title of the image.',
+                'resolve' => function ($source) {
+                    return $source->getTitle();
+                },
             ],
             'altText' => [
                 'name' => 'altText',
                 'type' => Type::string(),
                 'description' => 'The alt text for the image.',
+                'resolve' => function ($source) {
+                    return $source->getAltText();
+                },
             ],
             'width' => [
                 'name' => 'width',
@@ -83,6 +95,17 @@ class ImageShopType
                 'name' => 'rights',
                 'type' => Type::string(),
                 'description' => 'The rights information for the image.',
+                'resolve' => function ($source) {
+                    return $source->getRights();
+                },
+            ],
+            'tags' => [
+                'name' => 'tags',
+                'type' => Type::listOf(Type::string()),
+                'description' => 'The tags for the image.',
+                'resolve' => function ($source) {
+                    return $source->getTags();
+                },
             ],
             'resizedUrl' => [
                 'name' => 'resizedUrl',
