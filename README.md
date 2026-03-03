@@ -37,6 +37,28 @@ php craft plugin/install imageshop-dam
 
 - You will now have access to the "Imageshop" in the Field type dropdown on the field creation page.
 
+## Upgrading to 2.4.0
+
+After updating the plugin via Composer, run migrations to create the new sync log table:
+
+```bash
+php craft migrate --plugin=imageshop-dam
+```
+
+Or, if all pending migrations should be applied at once:
+
+```bash
+php craft migrate/all
+```
+
+The plugin will work without running migrations, but the **Utilities → Imageshop** page will not show sync history until the migration has been applied.
+
+### Removed field settings
+
+The **"Edit description before insert?"** (`showDescription`) and **"Show Credits?"** (`showCredits`) field settings have been removed. These controlled parameters sent to the Imageshop picker popup and are no longer needed.
+
+**No action is required.** If your project config YAML files still contain `showDescription` or `showCredits` keys under an Imageshop field's settings, they will be silently ignored. The stale keys are cleaned up automatically the next time you save the field in the control panel or run `php craft project-config/rebuild`.
+
 ## Imageshop DAM field
 
 To retrieve images from the Imageshop service, you must first create an Imageshop DAM field and assign it to an entry or any another element. The field can hold multiple images and images can be reordered within the field by dragging the grab‑icon that appears in the top‑left corner of each image.
