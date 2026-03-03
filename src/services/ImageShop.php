@@ -409,30 +409,34 @@ class ImageShop extends Component
      **/
     public function logSync(int $documentsChanged, int $jobsQueued, string $status): void
     {
-        Craft::$app->getDb()
-            ->createCommand()
-            ->insert('{{%imageshop-dam_sync_log}}', [
-                'dateCreated' => Db::prepareDateForDb(new \DateTime()),
-                'documentsChanged' => $documentsChanged,
-                'jobsQueued' => $jobsQueued,
-                'status' => $status,
-            ])
-            ->execute();
-
-        // Prune old entries, keeping the most recent 20
-        $cutoffId = (new Query())
-            ->select('id')
-            ->from('{{%imageshop-dam_sync_log}}')
-            ->orderBy(['id' => SORT_DESC])
-            ->offset(20)
-            ->limit(1)
-            ->scalar();
-
-        if ($cutoffId) {
+        try {
             Craft::$app->getDb()
                 ->createCommand()
-                ->delete('{{%imageshop-dam_sync_log}}', ['<=', 'id', $cutoffId])
+                ->insert('{{%imageshop-dam_sync_log}}', [
+                    'dateCreated' => Db::prepareDateForDb(new \DateTime()),
+                    'documentsChanged' => $documentsChanged,
+                    'jobsQueued' => $jobsQueued,
+                    'status' => $status,
+                ])
                 ->execute();
+
+            // Prune old entries, keeping the most recent 20
+            $cutoffId = (new Query())
+                ->select('id')
+                ->from('{{%imageshop-dam_sync_log}}')
+                ->orderBy(['id' => SORT_DESC])
+                ->offset(20)
+                ->limit(1)
+                ->scalar();
+
+            if ($cutoffId) {
+                Craft::$app->getDb()
+                    ->createCommand()
+                    ->delete('{{%imageshop-dam_sync_log}}', ['<=', 'id', $cutoffId])
+                    ->execute();
+            }
+        } catch (\yii\db\Exception $e) {
+            Craft::warning('Could not write to sync log table: ' . $e->getMessage(), 'imageshop-dam');
         }
     }
 
@@ -444,12 +448,16 @@ class ImageShop extends Component
      **/
     public function getSyncLog(int $limit = 10): array
     {
-        return (new Query())
-            ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status'])
-            ->from('{{%imageshop-dam_sync_log}}')
-            ->orderBy(['dateCreated' => SORT_DESC])
-            ->limit($limit)
-            ->all();
+        try {
+            return (new Query())
+                ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status'])
+                ->from('{{%imageshop-dam_sync_log}}')
+                ->orderBy(['dateCreated' => SORT_DESC])
+                ->limit($limit)
+                ->all();
+        } catch (\yii\db\Exception $e) {
+            return [];
+        }
     }
 
     /**
