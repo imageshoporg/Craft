@@ -187,6 +187,9 @@ class ImageShop extends Component
 
         $newData = [];
         foreach ($fieldColumnNames as $columnName) {
+            if ($rowsQuery[$columnName] === null) {
+                continue;
+            }
             $oldData = Json::decodeIfJson($rowsQuery[$columnName]);
             $newData[$columnName] = [];
             if (is_array($oldData)) {
@@ -291,23 +294,23 @@ class ImageShop extends Component
         $documentIds = $this->_getDocumentIdsFromImages($dbRows);
         $forUpdate = array_intersect($documentIds, $recentlyUpdatedIds);
 
-        if (count($forUpdate) === 0) {
-            return;
-        }
+        if (count($forUpdate) > 0) {
+            // Collect all languages present in the picker data
+            $languages = $this->_getLanguagesFromContentRows($dbRows);
 
-        // Collect all languages present in the picker data
-        $languages = $this->_getLanguagesFromContentRows($dbRows);
-
-        foreach ($forUpdate as $documentId) {
-            $documentCache[$documentId] = [];
-            foreach ($languages as $lang) {
-                $doc = $this->getDocumentById($documentId, $lang);
-                if ($doc) {
-                    $documentCache[$documentId][$lang] = $doc;
+            foreach ($forUpdate as $documentId) {
+                $documentCache[$documentId] = [];
+                foreach ($languages as $lang) {
+                    $doc = $this->getDocumentById($documentId, $lang);
+                    if ($doc) {
+                        $documentCache[$documentId][$lang] = $doc;
+                    }
                 }
             }
         }
 
+        // Always update cache and bump lastUpdated timestamp,
+        // even when empty, to clear stale data and prevent re-fetching
         $this->_setDocumentCache($documentCache);
     }
 
@@ -382,11 +385,18 @@ class ImageShop extends Component
             return 0;
         }
 
+        $cachedDocumentIds = array_keys($documentCache);
         $contentRows = $this->getAllImageShopContentRows();
-        $index = 0;
-        $total = count($contentRows);
 
-        foreach ($contentRows as $row) {
+        // Only create jobs for rows that contain documents that actually changed
+        $affectedRows = array_filter($contentRows, function ($row) use ($cachedDocumentIds) {
+            return !empty(array_intersect($row['documentIds'], $cachedDocumentIds));
+        });
+
+        $index = 0;
+        $total = count($affectedRows);
+
+        foreach ($affectedRows as $row) {
             Craft::$app->getQueue()->ttr(3600)->push(new Sync([
                 'rowId' => $row['rowId'],
                 'rowUid' => $row['rowUid'],
@@ -401,13 +411,40 @@ class ImageShop extends Component
     }
 
     /**
+     * Builds a summary of synced documents from the document cache.
+     *
+     * @param array $documentCache The document cache keyed by document ID
+     * @return array Array of ['documentId' => int, 'name' => string]
+     **/
+    public function buildSyncDetails(array $documentCache): array
+    {
+        $details = [];
+        foreach ($documentCache as $documentId => $langData) {
+            $name = null;
+            if (is_array($langData)) {
+                foreach ($langData as $doc) {
+                    if (is_array($doc) && !empty($doc['Name'])) {
+                        $name = $doc['Name'];
+                        break;
+                    }
+                }
+            }
+            $details[] = [
+                'documentId' => (int)$documentId,
+                'name' => $name ?? "Document {$documentId}",
+            ];
+        }
+        return $details;
+    }
+
+    /**
      * Logs a sync run to the sync log table.
      *
      * @param int $documentsChanged Number of documents fetched from API
      * @param int $jobsQueued Number of queue jobs created
      * @param string $status 'success' or 'no_changes'
      **/
-    public function logSync(int $documentsChanged, int $jobsQueued, string $status): void
+    public function logSync(int $documentsChanged, int $jobsQueued, string $status, array $details = []): void
     {
         try {
             Craft::$app->getDb()
@@ -417,6 +454,7 @@ class ImageShop extends Component
                     'documentsChanged' => $documentsChanged,
                     'jobsQueued' => $jobsQueued,
                     'status' => $status,
+                    'details' => !empty($details) ? Json::encode($details) : null,
                 ])
                 ->execute();
 
@@ -449,12 +487,19 @@ class ImageShop extends Component
     public function getSyncLog(int $limit = 10): array
     {
         try {
-            return (new Query())
-                ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status'])
+            $rows = (new Query())
+                ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status', 'details'])
                 ->from('{{%imageshop-dam_sync_log}}')
                 ->orderBy(['dateCreated' => SORT_DESC])
                 ->limit($limit)
                 ->all();
+
+            foreach ($rows as &$row) {
+                $row['details'] = $row['details'] ? Json::decodeIfJson($row['details']) : null;
+            }
+            unset($row);
+
+            return $rows;
         } catch (\yii\db\Exception $e) {
             return [];
         }
@@ -539,7 +584,7 @@ class ImageShop extends Component
             ->orderBy(['lastUpdated' => SORT_DESC])
             ->one();
 
-        return $query['lastUpdated'] ?? (new \DateTime('2000-01-01'))->format('m/d/Y h:i:s');
+        return $query['lastUpdated'] ?? '2000-01-01 00:00:00';
     }
 
     /**

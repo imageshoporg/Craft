@@ -20,8 +20,10 @@ class DefaultController extends Controller
         // Phase 1: Fetch recently changed documents from the ImageShop API and cache them
         $service->updateRecentlyUpdatedCache();
 
-        // Count how many documents were cached
-        $documentsChanged = count($service->getDocumentCache());
+        // Count how many documents were cached and build details
+        $documentCache = $service->getDocumentCache();
+        $documentsChanged = count($documentCache);
+        $details = $service->buildSyncDetails($documentCache);
 
         // Phase 2: Create queue jobs to update content rows from the cache
         $jobCount = $service->updateImages();
@@ -30,7 +32,8 @@ class DefaultController extends Controller
         $service->logSync(
             $documentsChanged,
             $jobCount,
-            $jobCount > 0 ? 'success' : 'no_changes'
+            $jobCount > 0 ? 'success' : 'no_changes',
+            $details
         );
 
         if ($jobCount > 0) {

@@ -27,6 +27,7 @@ class Install extends Migration
             'documentsChanged' => $this->integer()->notNull()->defaultValue(0),
             'jobsQueued' => $this->integer()->notNull()->defaultValue(0),
             'status' => $this->string(32)->notNull(),
+            'details' => $this->text(),
         ]);
 
         return true;

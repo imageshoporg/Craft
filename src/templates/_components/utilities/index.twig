@@ -37,8 +37,14 @@
         </thead>
         <tbody>
             {% for entry in syncLog %}
-                <tr>
-                    <td>{{ entry.dateCreated|date('short') }} {{ entry.dateCreated|time('short') }}</td>
+                {% set hasDetails = entry.details is defined and entry.details is iterable and entry.details|length > 0 %}
+                <tr{% if hasDetails %} class="is-sync-toggle" style="cursor: pointer;" data-sync-idx="{{ loop.index }}"{% endif %}>
+                    <td>
+                        {% if hasDetails %}
+                            <span class="sync-toggle-icon" data-sync-idx="{{ loop.index }}">&#x25b8;</span>
+                        {% endif %}
+                        {{ entry.dateCreated|date('short') }} {{ entry.dateCreated|time('short') }}
+                    </td>
                     <td>{{ entry.documentsChanged }}</td>
                     <td>{{ entry.jobsQueued }}</td>
                     <td>
@@ -49,7 +55,40 @@
                         {% endif %}
                     </td>
                 </tr>
+                {% if hasDetails %}
+                    <tr class="sync-details" data-sync-idx="{{ loop.index }}" style="display: none;">
+                        <td colspan="4" style="padding: 0 0 0 24px;">
+                            <ul style="margin: 8px 0; list-style: none; padding: 0;">
+                                {% for doc in entry.details %}
+                                    <li style="padding: 2px 0; color: #8f98a3;">
+                                        {% if loop.last %}&#x2514;{% else %}&#x251c;{% endif %}
+                                        {{ 'Document'|t('imageshop-dam') }} {{ doc.documentId }} &mdash; {{ doc.name }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                {% endif %}
             {% endfor %}
         </tbody>
     </table>
+
+    <script>
+    (function() {
+        document.querySelectorAll('tr.is-sync-toggle').forEach(function(row) {
+            row.addEventListener('click', function() {
+                var idx = this.dataset.syncIdx;
+                var detail = document.querySelector('tr.sync-details[data-sync-idx="' + idx + '"]');
+                var icon = this.querySelector('.sync-toggle-icon');
+                if (detail.style.display === 'none') {
+                    detail.style.display = '';
+                    icon.textContent = '\u25be';
+                } else {
+                    detail.style.display = 'none';
+                    icon.textContent = '\u25b8';
+                }
+            });
+        });
+    })();
+    </script>
 {% endif %}
