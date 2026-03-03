@@ -8,13 +8,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - Focal point support: `getFocalPoint()` on the image model returns CSS-ready `x`/`y` percentages from the Imageshop picker's focal point data.
 - `focalPoint` field in GraphQL type, returning JSON with `x`/`y` percentages.
-- `altText` field in GraphQL type.
+- `altText` and `tags` fields in GraphQL type.
+- Explicit GraphQL resolvers for all language-dependent text fields (`credits`, `description`, `title`, `altText`, `rights`, `tags`), ensuring correct per-site language resolution.
 - Documentation for focal point usage in Twig templates and GraphQL.
 - High-quality image permalink endpoint (`/actions/imageshop-dam/permalink/get-hq-url`) for fetching larger resolution images on-demand via the Imageshop Permalink API. Useful for lightbox/modal popups.
 - `getPermalink()` service method for generating permanent CDN URLs at any resolution.
 - Documentation for the permalink endpoint and gallery lightbox usage pattern.
 - Full Norwegian (Bokmål) translations for all plugin UI: settings page, field settings, field input labels, utility page, and queue job descriptions.
 - Added `|t('imageshop-dam')` translation filters to all plugin templates (settings, field settings, field input) to enable localization.
+- Sync log table (`imageshop-dam_sync_log`) records each sync run with documents changed, jobs queued, and status.
+- Sync history displayed on the Utilities → Imageshop page.
 
 ### Fixed
 - SEOmatic OpenGraph/Twitter image integration now works correctly. The matched element is resolved inside the event handler instead of at plugin init time, where routing hasn't completed yet. Image dimensions and alt text are now also set on the meta tags.
@@ -22,9 +25,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - SEOmatic CP sidebar preview (SEO Preview) now shows the Imageshop image in the Twitter and Facebook card previews.
 - GraphQL queries now return text in the correct site language instead of always using the current site's language.
 - `allowMultiple` setting is now enforced — single-image fields no longer accumulate extra images when the picker is opened repeatedly.
+- Sync now fetches metadata for all languages found in content, not just the plugin's configured language.
+- Fixed `mapDocumentFields` reading text fields from wrong location in API response.
 - Sync job uses correct field column names.
 - Fixed swapped descriptions for "Show Crop Dialogue" and "Show Size Dialogue" field settings.
-- Renamed "Show Description?" to "Edit description before insert?" with a clearer description.
 - Fixed duplicate `title` attribute on reorder icon in field input.
 - Fixed typos in OpenGraph global settings instructions.
 
@@ -37,6 +41,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Removed empty `EVENT_AFTER_INSTALL_PLUGIN` handler.
 - Standardized branding from "ImageShop" to "Imageshop" across all display text, documentation, and translations.
 - Reduced default permalink image width from 3840px to 1920px for faster loading.
+- Removed `showDescription` and `showCredits` field settings and their corresponding picker popup parameters (`SHOWDESCRIPTION`, `SHOWCREDITS`). Existing project configs with these keys are handled gracefully during upgrade.
 
 ## 2.3.0 - 2025-11-11
 ### Added
