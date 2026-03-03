@@ -3,30 +3,47 @@
 namespace webdna\imageshop\controllers;
 
 use craft\web\Controller;
-use webdna\imageshop\jobs\UpdateCache;
 use yii\web\Response;
 
-use craft;
+use Craft;
 use webdna\imageshop\ImageShop;
 
 class DefaultController extends Controller
 {
-    public function actionGetChangedDocuments(): ?Response
-    {
-        $this->requirePostRequest();
-        $this->requirePermission('utility:imageshop-dam');
-
-        Craft::$app->getQueue()->ttr(3600)->push(new UpdateCache());
-
-        return $this->redirectToPostedUrl();
-    }
-
     public function actionCreateSyncJobs(): ?Response
     {
         $this->requirePostRequest();
         $this->requirePermission('utility:imageshop-dam');
 
-        ImageShop::getInstance()->service->updateImages();
+        $service = ImageShop::getInstance()->service;
+
+        // Phase 1: Fetch recently changed documents from the ImageShop API and cache them
+        $service->updateRecentlyUpdatedCache();
+
+        // Count how many documents were cached
+        $documentsChanged = count($service->getDocumentCache());
+
+        // Phase 2: Create queue jobs to update content rows from the cache
+        $jobCount = $service->updateImages();
+
+        // Log the sync run
+        $service->logSync(
+            $documentsChanged,
+            $jobCount,
+            $jobCount > 0 ? 'success' : 'no_changes'
+        );
+
+        if ($jobCount > 0) {
+            Craft::$app->getSession()->setNotice(
+                Craft::t('imageshop-dam', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
+                    'count' => $jobCount,
+                ])
+            );
+        } else {
+            Craft::$app->getSession()->setNotice(
+                Craft::t('imageshop-dam', 'No changes found. All metadata is up to date.')
+            );
+        }
 
         return $this->redirectToPostedUrl();
     }

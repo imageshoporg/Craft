@@ -256,15 +256,36 @@ Raw:            {{ entry.imageshopField.json | json_encode(constant("JSON_PRETTY
 
 Imageshop provides a utility tool for updating image metadata.
 
-To access it, go to Utilities → Imageshop, and click Sync Metadata.
+To access it, go to **Utilities → Imageshop**, and click **Sync metadata**.
 
-This action will add a job to the queue that updates all elements - including Entries, Categories, Users, Global Sets, Assets, Matrix Blocks, and Commerce Products - that contain Imageshop fields. The content will be refreshed with the latest data from the API, such as image descriptions and alt text.
+The sync runs in two phases:
 
-This is useful in two situations:
+1. **Fetch changes** — The plugin calls the Imageshop API to find all documents that have changed since the last sync. For each changed document, it fetches the latest metadata in every language present in your content (e.g. `en`, `no`, `sv`).
+2. **Queue updates** — A queue job is created for each content row that contains an Imageshop field, updating stored metadata (alt text, description, credits, rights, tags, and title) with the freshly fetched API data.
+
+Flash messages confirm how many jobs were queued, or report that no changes were found.
+
+### Sync history
+
+Each sync run is logged and displayed in a **Sync history** table directly on the utility page. The table shows:
+
+| Column | Description |
+|--------|-------------|
+| Date | When the sync was triggered |
+| Documents changed | Number of documents fetched from the API |
+| Jobs queued | Number of content rows queued for update |
+| Status | **Success** (jobs were created) or **No changes** (nothing to update) |
+
+The log keeps the most recent 20 entries and prunes older ones automatically.
+
+### When to use
 
 * When an image in the Imageshop service has been updated since it was last added to the Craft CMS system.
-
 * When you want to override any manual changes made to images (for example, manually edited alt text).
+
+### Multi-language sync
+
+The sync fetches document metadata once per language that exists in your content. This means all language variants (English, Norwegian, Swedish, etc.) are updated in a single sync run — not just the plugin's configured default language.
 
 ## Using Imageshop Field as an OpenGraph Image Source (SEOmatic)
 

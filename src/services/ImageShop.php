@@ -122,10 +122,12 @@ class ImageShop extends Component
             ->select('*')
             ->from(Table::CONTENT);
 
-
+        // Use OR so rows with ANY ImageShop field populated are included
+        $condition = ['or'];
         foreach ($fields as $field) {
-            $rowsQuery->andWhere(['not', [$field => null]]);
+            $condition[] = ['not', [$field => null]];
         }
+        $rowsQuery->andWhere($condition);
         // would be better to do this with something like JSON_CONTAINS but
         // can't be certain about db driver or version on system.
 
@@ -139,7 +141,7 @@ class ImageShop extends Component
             ];
 
             foreach ($fields as $field) {
-                if (array_key_exists($field,$value) && Json::isJsonObject($value[$field])) {
+                if (array_key_exists($field,$value) && is_string($value[$field]) && Json::isJsonObject($value[$field])) {
                     $fieldValue = Json::decode($value[$field]);
                     // deal with pre-allow multiple update
                     if (array_key_exists('documentId', $fieldValue)) {
@@ -231,48 +233,30 @@ class ImageShop extends Component
     {
         $mapped = $dataFromPicker;
 
-        // Build a lookup of API text data keyed by language
-        $apiTextByLang = [];
-        if (isset($dataFromApi['InterfaceList']) && is_array($dataFromApi['InterfaceList'])) {
-            foreach ($dataFromApi['InterfaceList'] as $iface) {
-                $lang = $this->sanitizeLanguage($iface['Language'] ?? '');
-                if ($lang) {
-                    $apiTextByLang[$lang] = $iface;
-                }
-            }
-        }
+        // The cache stores per-language API responses: { lang => apiDoc }
+        // Each apiDoc has top-level fields: AltText, Description, Credits, etc.
+        $fieldMap = [
+            'altText' => 'AltText',
+            'description' => 'Description',
+            'title' => 'Name',
+            'credits' => 'Credits',
+            'rights' => 'Rights',
+            'tags' => 'Tags',
+        ];
 
-        // Sync all text fields across all languages present in the picker data
         if (isset($mapped['text']) && is_array($mapped['text'])) {
             foreach ($mapped['text'] as $lang => &$textBlock) {
-                if (!isset($apiTextByLang[$lang])) {
+                if (!isset($dataFromApi[$lang]) || !is_array($dataFromApi[$lang])) {
                     continue;
                 }
-                $apiText = $apiTextByLang[$lang];
-                $fieldMap = [
-                    'altText' => 'AltText',
-                    'description' => 'Description',
-                    'title' => 'Title',
-                    'credits' => 'Credits',
-                    'rights' => 'Rights',
-                    'tags' => 'Tags',
-                ];
+                $apiDoc = $dataFromApi[$lang];
                 foreach ($fieldMap as $pickerKey => $apiKey) {
-                    if (isset($apiText[$apiKey])) {
-                        $textBlock[$pickerKey] = $apiText[$apiKey];
+                    if (array_key_exists($apiKey, $apiDoc)) {
+                        $textBlock[$pickerKey] = $apiDoc[$apiKey];
                     }
                 }
             }
             unset($textBlock);
-        }
-
-        // Also check flat altText for backwards compatibility
-        if (isset($dataFromApi['altText']) && isset($mapped['text'])) {
-            $settings = Plugin::getInstance()->getSettings();
-            $language = $this->sanitizeLanguage($settings->language);
-            if (isset($mapped['text'][$language]) && !isset($apiTextByLang[$language])) {
-                $mapped['text'][$language]['altText'] = $dataFromApi['altText'];
-            }
         }
 
         return $mapped;
@@ -292,14 +276,17 @@ class ImageShop extends Component
 
 
     /**
-     * Creates the recently updated document cache using the getDocumentById API call
+     * Creates the recently updated document cache using the getDocumentById API call.
+     * Fetches each document once per language found in the picker data so that
+     * all language-specific text fields can be synced.
+     *
+     * Cache format: { documentId => { lang => apiResponse, ... }, ... }
      *
      * @param array $dbRows data from content table row in the format 'rowId','rowUid','documentIds','fields' (contains all document data)
      * @param array $recentlyUpdatedIds Document Ids from the recently updated api call
      **/
     private function _getNewImageData(array $dbRows, $recentlyUpdatedIds): void
     {
-        $settings = Plugin::$plugin->getSettings();
         $documentCache = [];
         $documentIds = $this->_getDocumentIdsFromImages($dbRows);
         $forUpdate = array_intersect($documentIds, $recentlyUpdatedIds);
@@ -308,14 +295,44 @@ class ImageShop extends Component
             return;
         }
 
+        // Collect all languages present in the picker data
+        $languages = $this->_getLanguagesFromContentRows($dbRows);
+
         foreach ($forUpdate as $documentId) {
-            $documentCache[$documentId] = $this->getDocumentById($documentId,$settings->language);
+            $documentCache[$documentId] = [];
+            foreach ($languages as $lang) {
+                $doc = $this->getDocumentById($documentId, $lang);
+                if ($doc) {
+                    $documentCache[$documentId][$lang] = $doc;
+                }
+            }
         }
 
-
         $this->_setDocumentCache($documentCache);
+    }
 
-        return;
+    /**
+     * Extracts all unique sanitized language codes from the picker text data
+     * across all content rows.
+     *
+     * @param array $rows Content rows from getAllImageShopContentRows
+     * @return array Unique language codes
+     **/
+    private function _getLanguagesFromContentRows(array $rows): array
+    {
+        $languages = [];
+        foreach ($rows as $row) {
+            foreach ($row['fields'] as $docs) {
+                foreach ($docs as $data) {
+                    if (isset($data['text']) && is_array($data['text'])) {
+                        foreach (array_keys($data['text']) as $lang) {
+                            $languages[$lang] = true;
+                        }
+                    }
+                }
+            }
+        }
+        return array_keys($languages);
     }
 
     /**
@@ -353,15 +370,16 @@ class ImageShop extends Component
     }
 
     /**
-     * Creates the queue jobs to update all the relevent content rows in the db with the latest imageshop image data
+     * Creates the queue jobs to update all the relevant content rows in the db with the latest imageshop image data.
+     *
+     * @return int Number of queue jobs created
      **/
-    public function updateImages(): void
+    public function updateImages(): int
     {
-        // check if there is anything to do
         $documentCache = $this->getDocumentCache();
 
-        if (count($documentCache) == 0) {
-            return;
+        if (count($documentCache) === 0) {
+            return 0;
         }
 
         $contentRows = $this->getAllImageShopContentRows();
@@ -378,7 +396,60 @@ class ImageShop extends Component
                 'count' => $total
             ]));
         }
-        return;
+
+        return $total;
+    }
+
+    /**
+     * Logs a sync run to the sync log table.
+     *
+     * @param int $documentsChanged Number of documents fetched from API
+     * @param int $jobsQueued Number of queue jobs created
+     * @param string $status 'success' or 'no_changes'
+     **/
+    public function logSync(int $documentsChanged, int $jobsQueued, string $status): void
+    {
+        Craft::$app->getDb()
+            ->createCommand()
+            ->insert('{{%imageshop-dam_sync_log}}', [
+                'dateCreated' => Db::prepareDateForDb(new \DateTime()),
+                'documentsChanged' => $documentsChanged,
+                'jobsQueued' => $jobsQueued,
+                'status' => $status,
+            ])
+            ->execute();
+
+        // Prune old entries, keeping the most recent 20
+        $cutoffId = (new Query())
+            ->select('id')
+            ->from('{{%imageshop-dam_sync_log}}')
+            ->orderBy(['id' => SORT_DESC])
+            ->offset(20)
+            ->limit(1)
+            ->scalar();
+
+        if ($cutoffId) {
+            Craft::$app->getDb()
+                ->createCommand()
+                ->delete('{{%imageshop-dam_sync_log}}', ['<=', 'id', $cutoffId])
+                ->execute();
+        }
+    }
+
+    /**
+     * Returns recent sync log entries.
+     *
+     * @param int $limit Max entries to return
+     * @return array
+     **/
+    public function getSyncLog(int $limit = 10): array
+    {
+        return (new Query())
+            ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status'])
+            ->from('{{%imageshop-dam_sync_log}}')
+            ->orderBy(['dateCreated' => SORT_DESC])
+            ->limit($limit)
+            ->all();
     }
 
     /**
@@ -404,9 +475,9 @@ class ImageShop extends Component
     /**
      * Gets the recently updated document cache from the db
      *
-     * @return array|string The document cache
+     * @return array The document cache
      **/
-    public function getDocumentCache(): array|string
+    public function getDocumentCache(): array
     {
         $query = (new Query())
             ->select('documentCache')
@@ -418,7 +489,9 @@ class ImageShop extends Component
             return [];
         }
 
-        return Json::decodeIfJson($query['documentCache']);
+        $decoded = Json::decodeIfJson($query['documentCache']);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**

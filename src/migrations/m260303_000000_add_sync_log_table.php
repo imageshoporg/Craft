@@ -2,25 +2,12 @@
 
 namespace webdna\imageshop\migrations;
 
-use Craft;
 use craft\db\Migration;
 
-/**
- * Install migration.
- */
-class Install extends Migration
+class m260303_000000_add_sync_log_table extends Migration
 {
-    /**
-     * @inheritdoc
-     */
     public function safeUp(): bool
     {
-        $this->createTable('{{%imageshop-dam_sync}}', [
-            'id' => $this->primaryKey(),
-            'lastUpdated' => $this->dateTime(),
-            'documentCache' => $this->longText()
-        ]);
-
         $this->createTable('{{%imageshop-dam_sync_log}}', [
             'id' => $this->primaryKey(),
             'dateCreated' => $this->dateTime()->notNull(),
@@ -32,13 +19,9 @@ class Install extends Migration
         return true;
     }
 
-    /**
-     * @inheritdoc
-     */
     public function safeDown(): bool
     {
         $this->dropTableIfExists('{{%imageshop-dam_sync_log}}');
-        $this->dropTableIfExists('{{%imageshop-dam_sync}}');
 
         return true;
     }

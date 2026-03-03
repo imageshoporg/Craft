@@ -28,15 +28,11 @@ class ImageShop extends Utility
 
     static function contentHtml(): string
     {
-        $view = Craft::$app->getView();
-        $documentCacheExists = !empty(Plugin::getInstance()->service->getDocumentCache());
-        return $view->renderTemplate(
+        return Craft::$app->getView()->renderTemplate(
             'imageshop-dam/_components/utilities/index.twig',
             [
-                'canRunDbUpdate' => $documentCacheExists
+                'syncLog' => Plugin::getInstance()->service->getSyncLog(),
             ]
         );
     }
 }
-
-
