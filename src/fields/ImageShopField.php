@@ -40,14 +40,11 @@ class ImageShopField extends Field
 
     public bool $showCropDialogue = false;
 
-    public bool $showDescription = false;
-
-    public bool $showCredits = false;
-
     public bool $allowMultiple = false;
 
     public string $sizes = 'Normal;1920x0';
 
+    private static array $_removedSettings = ['showDescription', 'showCredits'];
 
     // Static Methods
     // =========================================================================
@@ -60,6 +57,13 @@ class ImageShopField extends Field
     // Public Methods
     // =========================================================================
 
+    public function __set($name, $value)
+    {
+        if (in_array($name, self::$_removedSettings, true)) {
+            return;
+        }
+        parent::__set($name, $value);
+    }
 
     /**
      * @inheritdoc
@@ -154,8 +158,6 @@ class ImageShopField extends Field
             "SHOWSIZEDIALOGUE" => $this->showSizeDialogue ? 'true' : 'false',
             "SHOWCROPDIALOGUE" => $this->showCropDialogue ? 'true' : 'false',
             "IMAGESHOPSIZES" => $this->sizes,
-            "SHOWDESCRIPTION" => $this->showDescription ? 'true' : 'false',
-            "SHOWCREDITS" => $this->showCredits ? 'true' : 'false',
             "FORMAT" => "json",
             "SETDOMAIN" => "false",
             "CULTURE" => $settings->language,
