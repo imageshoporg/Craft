@@ -306,6 +306,62 @@ When an Imageshop image is found, the following SEOmatic meta tags are set autom
 
 The **SEO Preview** sidebar in the entry editor will show the Imageshop image in the Twitter and Facebook card previews, so editors can verify the social sharing appearance before publishing.
 
+### Complete SEOmatic + Multi-Site Setup
+
+The ImageShop plugin and SEOmatic each handle different parts of your page's social sharing metadata. Both must be configured for complete OpenGraph / Twitter Card output.
+
+**Division of responsibility:**
+
+| Meta Tag | Source | Configuration |
+|----------|--------|---------------|
+| `og:image` / `twitter:image` | ImageShop plugin | Plugin settings → OpenGraph field |
+| `og:image:alt` | ImageShop plugin | Automatic from ImageShop API (per-language) |
+| `og:image:width` / `og:image:height` | ImageShop plugin | Automatic from image data |
+| `og:title` | SEOmatic | SEOmatic → Content → section → Title Source |
+| `og:description` | SEOmatic | SEOmatic → Content → section → Description Source |
+| `og:type` | SEOmatic | SEOmatic → Content → section → OG Type |
+| `og:url`, `og:locale` | SEOmatic | Automatic from site/entry URL |
+
+#### Configuring SEOmatic per section
+
+In the control panel, go to **SEOmatic → Content SEO**, then click the section you want to configure (e.g. "Blog"):
+
+1. **SEO Description Source** — set to "From Custom" and enter a Twig template referencing your description field, e.g. `{entry.summary}` or `{entry.description}`.
+2. **SEO Title Source** — typically "From Field" using the entry title, or "From Custom" for a custom pattern.
+3. **OpenGraph Title / Description** — set to "Same as SEO Title" / "Same as SEO Description" to inherit from the SEO settings above.
+4. **OpenGraph Type** — use `article` for blog/news sections, `website` for homepage or static page sections.
+
+Repeat for each section that should have social sharing metadata.
+
+#### Multi-site configuration
+
+SEOmatic stores its meta bundles **per site**. Each site needs its own configuration:
+
+1. In **SEOmatic → Content SEO**, use the **site switcher dropdown** (top-left of the CP) to switch between sites.
+2. Configure each section's SEO/OG settings for that site (title source, description source, etc.).
+3. The ImageShop field must be set to **translatable** (per-site) so each site can have its own alt text and description. Alt text language is resolved automatically from the current site — no extra configuration is needed.
+
+**URI format tip for translated sites:** If the translated site's `baseUrl` already includes a language prefix (e.g. `https://example.com/no/`), the section URI formats should **not** repeat the prefix. Use `blog/{slug}`, not `no/blog/{slug}`.
+
+#### Verifying the complete setup
+
+After configuring both plugins, check the rendered HTML to confirm all expected tags are present:
+
+```bash
+curl -s https://your-site.com/blog/example-post | grep -iE 'og:|twitter:'
+```
+
+For a blog post, you should see:
+
+- `og:type` → `article`
+- `og:title` → entry title (from SEOmatic)
+- `og:description` → entry summary/description (from SEOmatic)
+- `og:image` → ImageShop URL (from ImageShop plugin)
+- `og:image:alt` → language-appropriate alt text (from ImageShop plugin)
+- `og:url` → canonical URL (from SEOmatic)
+
+If any tags are missing, check that the corresponding plugin (ImageShop or SEOmatic) is configured for that section and site.
+
 ## High-Quality Image Permalinks
 
 The plugin provides an API endpoint for generating high-quality image URLs on-demand via the Imageshop Permalink API. This is useful for lightbox/modal popups where you want to show a higher resolution version than the default field image.
