@@ -42,9 +42,11 @@ class ImageShopField extends Field
 
     public bool $allowMultiple = false;
 
+    public bool $showDescription = false;
+
     public string $sizes = 'Normal;1920x0';
 
-    private static array $_removedSettings = ['showDescription', 'showCredits'];
+    private static array $_removedSettings = ['showCredits'];
 
     // Static Methods
     // =========================================================================
@@ -157,6 +159,7 @@ class ImageShopField extends Field
             "IMAGESHOPTOKEN" => App::parseEnv($settings->token),
             "SHOWSIZEDIALOGUE" => $this->showSizeDialogue ? 'true' : 'false',
             "SHOWCROPDIALOGUE" => $this->showCropDialogue ? 'true' : 'false',
+            "SHOWDESCRIPTION" => $this->showDescription ? 'true' : 'false',
             "IMAGESHOPSIZES" => $this->sizes,
             "FORMAT" => "json",
             "SETDOMAIN" => "false",

@@ -30,6 +30,13 @@
 }) }}
 
 {{ forms.lightswitchField({
+    label: 'Edit description before insert?'|t('imageshop-dam'),
+    instructions: 'Indicates whether the description field should be editable when inserting an image.'|t('imageshop-dam'),
+    name: 'showDescription',
+    on: field['showDescription']
+}) }}
+
+{{ forms.lightswitchField({
     label: 'Show Crop Dialogue?'|t('imageshop-dam'),
     instructions: 'Indicates whether the crop dialogue should be shown.'|t('imageshop-dam'),
     name: 'showCropDialogue',
