@@ -163,7 +163,7 @@ class ImageShopField extends Field
             "IMAGESHOPSIZES" => $this->sizes,
             "FORMAT" => "json",
             "SETDOMAIN" => "false",
-            "CULTURE" => $settings->language,
+            "CULTURE" => $this->getCurrentAdminLanguage() ?: $settings->language,
             "ENABLEMULTISELECT" => $this->allowMultiple ? 'true' : 'false'
         ]);
 
