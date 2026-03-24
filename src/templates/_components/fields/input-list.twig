@@ -4,7 +4,7 @@
         <span data-imageshop-trigger-settings data-icon="settings" class="imageshop-img-container__settings imageshop-img-container-icon" title="{{ 'Show settings'|t('imageshop-dam') }}"></span>
         <a class="delete icon imageshop-remove imageshop-img-container__remove imageshop-img-container-icon" title="{{ 'Remove image'|t('imageshop-dam') }}" data-img-code="{{ image.code }}"></a>
         <div class="imageshop-img-container__wrapper">
-            <img src="{{ image.image }}" width="100">
+            <img src="{{ image.getResizedUrl(400) }}" width="100">
         </div>
         <div class="imageshop-label">
             <div class="label">

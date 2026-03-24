@@ -72,7 +72,7 @@ class ImageShopField extends Field
      */
     public function getContentColumnType(): array|string
     {
-        return Schema::TYPE_TEXT;
+        return 'mediumtext';
     }
 
     /**
