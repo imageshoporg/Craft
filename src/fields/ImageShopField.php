@@ -70,7 +70,14 @@ class ImageShopField extends Field
     /**
      * @inheritdoc
      */
+    // Craft 4
     public function getContentColumnType(): array|string
+    {
+        return 'mediumtext';
+    }
+
+    // Craft 5
+    public static function dbType(): array|string|null
     {
         return 'mediumtext';
     }
@@ -78,7 +85,7 @@ class ImageShopField extends Field
     /**
      * @inheritdoc
      */
-    public function normalizeValue($value, ElementInterface $element = null): Model|array|null
+    public function normalizeValue(mixed $value, ?ElementInterface $element = null): mixed
     {
         $siteLanguage = null;
         if ($element) {
@@ -94,6 +101,20 @@ class ImageShopField extends Field
             $models = [$value];
         } elseif (is_array($value) && array_is_list($value)) {
             $models = array_filter($value, fn($image) => $image instanceof Model);
+            if (empty($models)) {
+                // Craft 5: array of JSON strings or decoded associative arrays
+                $models = [];
+                foreach (array_filter($value, fn($v) => !empty($v)) as $item) {
+                    if (is_string($item)) {
+                        $decoded = Json::decodeIfJson($item);
+                        if (is_array($decoded)) {
+                            $models[] = new Model($decoded);
+                        }
+                    } elseif (is_array($item)) {
+                        $models[] = new Model($item);
+                    }
+                }
+            }
         } elseif (is_string($value) && Json::isJsonObject($value)) {
             $json = Json::decode($value);
             if (array_is_list($json)) {
@@ -123,11 +144,10 @@ class ImageShopField extends Field
     /**
      * @inheritdoc
      */
-    public function serializeValue($value, ElementInterface $element = null): mixed
+    public function serializeValue(mixed $value, ?ElementInterface $element = null): mixed
     {
-        // If it's "arrayable", convert to array
         if (is_array($value)) {
-            return array_map(fn($image) => $image->serialize(), $value);
+            return array_map(fn($image) => $image instanceof Model ? $image->serialize() : $image, $value);
         }
 
         return parent::serializeValue($value, $element);
@@ -150,7 +170,7 @@ class ImageShopField extends Field
     /**
      * @inheritdoc
      */
-    public function getInputHtml($value, ElementInterface $element = null): string
+    public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
     {
         $settings = ImageShop::$plugin->getSettings();
         $token = ImageShop::$plugin->service->getTemporaryToken();

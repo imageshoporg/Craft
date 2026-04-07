@@ -50,6 +50,15 @@ class ImageShop extends Plugin
     // Public Methods
     // =========================================================================
 
+    public static function config(): array
+    {
+        return [
+            'components' => [
+                'service' => Service::class,
+            ],
+        ];
+    }
+
     public function init()
     {
         parent::init();
@@ -75,7 +84,10 @@ class ImageShop extends Plugin
             ),
             __METHOD__
         );
-        Event::on(Utilities::class, Utilities::EVENT_REGISTER_UTILITY_TYPES, function (RegisterComponentTypesEvent $event) {
+        $utilityEvent = defined(Utilities::class . '::EVENT_REGISTER_UTILITIES')
+            ? Utilities::EVENT_REGISTER_UTILITIES
+            : Utilities::EVENT_REGISTER_UTILITY_TYPES;
+        Event::on(Utilities::class, $utilityEvent, function (RegisterComponentTypesEvent $event) {
             $event->types[] = UtilitiesImageShop::class;
         });
 

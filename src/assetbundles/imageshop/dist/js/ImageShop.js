@@ -239,6 +239,82 @@
                 this.$popupWindow = window.open(this.$url, "imageshop", settings);
             },
 
+            refreshAndStore: function (result, newData) {
+                var self = this;
+                var newDocIds = newData
+                    .filter(function (img) { return img.documentId; })
+                    .map(function (img) { return img.documentId; });
+
+                if (newDocIds.length === 0) {
+                    self.$hiddenInput.val(JSON.stringify(result));
+                    self.updatePreview(JSON.stringify(result));
+                    return;
+                }
+
+                // Collect all languages present in the image text blocks
+                var languages = [];
+                newData.forEach(function (img) {
+                    if (img.text) {
+                        Object.keys(img.text).forEach(function (lang) {
+                            if (languages.indexOf(lang) === -1) {
+                                languages.push(lang);
+                            }
+                        });
+                    }
+                });
+
+                var fieldMap = {
+                    'AltText': 'altText',
+                    'Description': 'description',
+                    'Name': 'title',
+                    'Credits': 'credits',
+                    'Rights': 'rights',
+                    'Tags': 'tags'
+                };
+
+                $.ajax({
+                    url: Craft.getActionUrl('imageshop-dam/content/refresh-metadata'),
+                    method: "POST",
+                    data: {
+                        documentIds: newDocIds,
+                        languages: languages,
+                    },
+                    dataType: "json",
+                    headers: {
+                        "Accept": "application/json",
+                        "X-CSRF-Token": Craft.csrfTokenValue
+                    },
+                    success: function (response) {
+                        var freshData = response.result || {};
+
+                        result.forEach(function (img) {
+                            var docFresh = freshData[img.documentId];
+                            if (!docFresh || !img.text) return;
+
+                            Object.keys(img.text).forEach(function (lang) {
+                                var apiDoc = docFresh[lang];
+                                if (!apiDoc || !img.text[lang]) return;
+
+                                Object.keys(fieldMap).forEach(function (apiKey) {
+                                    var pickerKey = fieldMap[apiKey];
+                                    if (apiKey in apiDoc) {
+                                        img.text[lang][pickerKey] = apiDoc[apiKey];
+                                    }
+                                });
+                            });
+                        });
+
+                        self.$hiddenInput.val(JSON.stringify(result));
+                        self.updatePreview(JSON.stringify(result));
+                    },
+                    error: function () {
+                        // Fallback: store without refresh
+                        self.$hiddenInput.val(JSON.stringify(result));
+                        self.updatePreview(JSON.stringify(result));
+                    }
+                });
+            },
+
             updatePreview: function (data) {
                 var json = JSON.parse(data);
 

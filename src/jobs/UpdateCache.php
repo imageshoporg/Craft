@@ -12,7 +12,7 @@ use webdna\imageshop\ImageShop;
  */
 class UpdateCache extends BaseJob
 {
-    function execute($queue): void
+    public function execute($queue): void
     {
         ImageShop::getInstance()->service->updateRecentlyUpdatedCache();
     }

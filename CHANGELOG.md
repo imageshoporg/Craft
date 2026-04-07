@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 2.5.0 - 2026-04-07
+### Added
+- **Craft CMS 5 support.** The plugin now works on both Craft 4 and Craft 5. Composer requirement updated to `^4.0.0 || ^5.0.0`.
+- Restored **"Edit description before insert?"** (`showDescription`) field setting and `SHOWDESCRIPTION` picker popup parameter. When enabled, the Imageshop popup shows a description field that editors can fill in before inserting the image. The entered description is passed through to Craft and pre-populates the description field on the entry.
+- **Site-aware picker language.** The Imageshop popup (`CULTURE` parameter) now uses the current site's language instead of the plugin's global language setting. Editors see the popup in the correct language when editing entries on different sites.
+- **Smaller admin thumbnails.** Field thumbnails in the control panel now load 400px resized images via `getResizedUrl()` instead of full-size originals, reducing bandwidth and improving editor performance.
+- `MEDIUMTEXT` content column type for ImageShop fields (was `TEXT`), supporting larger JSON payloads for gallery fields with many images. Includes a migration to upgrade existing field columns.
+- `refreshMetadata` controller action for re-fetching document metadata from the Imageshop API after popup selection.
+
+### Fixed
+- Fixed Craft 5 compatibility: updated `normalizeValue()`, `serializeValue()`, and `getInputHtml()` method signatures. Added static `dbType()` method alongside `getContentColumnType()`.
+- Fixed Craft 5 utility registration: `EVENT_REGISTER_UTILITY_TYPES` → `EVENT_REGISTER_UTILITIES` (runtime detection for dual Craft 4/5 support).
+- Fixed Craft 5 service registration: added `config()` static method for component registration.
+- Fixed `normalizeValue()` to handle arrays of JSON strings and decoded associative arrays (Craft 5 content storage path).
+- Added `public` visibility modifier to utility methods (`id()`, `contentHtml()`) and queue job `execute()` methods.
+
+### Changed
+- Composer requirement updated from `^4.0.0` to `^4.0.0 || ^5.0.0`.
+
 ## 2.4.0 - 2026-02-20
 ### Added
 - Focal point support: `getFocalPoint()` on the image model returns CSS-ready `x`/`y` percentages from the Imageshop picker's focal point data.

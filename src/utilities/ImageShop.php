@@ -16,7 +16,7 @@ class ImageShop extends Utility
         return Craft::t('imageshop-dam', 'Imageshop');
     }
 
-    static function id(): string
+    public static function id(): string
     {
         return 'imageshop-dam';
     }
@@ -26,7 +26,7 @@ class ImageShop extends Utility
         return null;
     }
 
-    static function contentHtml(): string
+    public static function contentHtml(): string
     {
         return Craft::$app->getView()->renderTemplate(
             'imageshop-dam/_components/utilities/index.twig',

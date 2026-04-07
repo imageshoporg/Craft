@@ -20,7 +20,7 @@ class Sync extends BaseJob
     public int $index = 0;
     public int $count = 0;
 
-    function execute($queue): void
+    public function execute($queue): void
     {
         $this->setProgress($queue, $this->index / max($this->count, 1));
 

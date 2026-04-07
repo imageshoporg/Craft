@@ -1,5 +1,7 @@
 # Official Imageshop plugin for Craft CMS
 
+**Supports Craft CMS 4 and Craft CMS 5.**
+
 This official plugin integrates [Imageshop Digital Asset Management system](https://www.imageshop.org) with Craft CMS by exposing
 their image selector as a popup that saves the selected image data in a field so the selection
 can be used in twig templates.
@@ -37,9 +39,9 @@ php craft plugin/install imageshop-dam
 
 - You will now have access to the "Imageshop" in the Field type dropdown on the field creation page.
 
-## Upgrading to 2.4.0
+## Upgrading to 2.5.0
 
-After updating the plugin via Composer, run migrations to create the new sync log table:
+After updating the plugin via Composer, run migrations to upgrade field content columns from `TEXT` to `MEDIUMTEXT`:
 
 ```bash
 php craft migrate --plugin=imageshop-dam
@@ -51,13 +53,19 @@ Or, if all pending migrations should be applied at once:
 php craft migrate/all
 ```
 
-The plugin will work without running migrations, but the **Utilities → Imageshop** page will not show sync history until the migration has been applied.
+### Craft 5 support
+
+Version 2.5.0 supports both Craft CMS 4 and Craft CMS 5. No additional configuration is needed — the plugin detects the Craft version at runtime.
+
+### Restored "Edit description before insert?"
+
+The `showDescription` field setting has been restored. When enabled, the Imageshop popup shows a description input field that editors can fill in before inserting the image. The entered description is passed through to the Craft entry's description field.
+
+To enable: edit the Imageshop field in **Settings → Fields**, and toggle **"Edit description before insert?"** on.
 
 ### Removed field settings
 
-The **"Edit description before insert?"** (`showDescription`) and **"Show Credits?"** (`showCredits`) field settings have been removed. These controlled parameters sent to the Imageshop picker popup and are no longer needed.
-
-**No action is required.** If your project config YAML files still contain `showDescription` or `showCredits` keys under an Imageshop field's settings, they will be silently ignored. The stale keys are cleaned up automatically the next time you save the field in the control panel or run `php craft project-config/rebuild`.
+The **"Show Credits?"** (`showCredits`) field setting remains removed. If your project config YAML files still contain `showCredits` keys under an Imageshop field's settings, they will be silently ignored.
 
 ## Imageshop DAM field
 
