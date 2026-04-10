@@ -11,8 +11,8 @@
         "imageshop"
     ],
     "support": {
-        "docs": "https://github.com/webdna/imageshop/blob/master/README.md",
-        "issues": "https://github.com/webdna/imageshop/issues"
+        "docs": "https://github.com/imageshoporg/Craft/blob/update/craft4/README.md",
+        "issues": "https://github.com/imageshoporg/Craft/issues"
     },
     "license": "proprietary",
     "authors": [
@@ -34,7 +34,7 @@
         "handle": "imageshop-dam",
         "developer": "WebDNA",
         "developerUrl": "https://webdna.co.uk",
-        "changelogUrl": "https://raw.githubusercontent.com/webdna/imageshop/master/CHANGELOG.md",
+        "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/update/craft4/CHANGELOG.md",
         "class": "webdna\\imageshop\\ImageShop"
     }
 }
