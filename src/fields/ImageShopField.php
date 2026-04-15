@@ -184,6 +184,7 @@ class ImageShopField extends Field
             "FORMAT" => "json",
             "SETDOMAIN" => "false",
             "CULTURE" => $this->getCurrentAdminLanguage() ?: $settings->language,
+            "IMAGESHOPLANGUAGE" => $this->getCurrentAdminLanguage() ?: $settings->language,
             "ENABLEMULTISELECT" => $this->allowMultiple ? 'true' : 'false'
         ]);
 
