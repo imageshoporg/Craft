@@ -38,21 +38,64 @@ class ImageShop extends Component
     /**
      * Get a temporary access token
      *
-     * @return mixed
+     * @return ?string
      **/
-    public function getTemporaryToken(): mixed
+    public function getTemporaryToken(): ?string
     {
         $settings = Plugin::$plugin->getSettings();
 
-        // If no token is sent or set in settings
         if (empty($settings->token) || empty($settings->key)) {
             return null;
         }
-        return $this->_request('GET','/Login/GetTemporaryToken',[
+
+        $response = $this->_request('GET','/Login/GetTemporaryToken',[
             'query' => [
                 'privateKey' => App::parseEnv($settings->key)
             ]
         ]);
+
+        if (!is_string($response) || $response === '') {
+            return null;
+        }
+
+        $decoded = Json::decodeIfJson($response);
+        $token = is_string($decoded) ? $decoded : $response;
+        $token = trim($token, "\" \t\n\r\0\x0B");
+
+        return $token !== '' ? $token : null;
+    }
+
+    /**
+     * Builds the ImageShop picker popup URL using a fresh temporary token.
+     * Only known option keys are honored; callers cannot inject arbitrary query parameters.
+     *
+     * @param array $options Field options: showSizeDialogue, showCropDialogue, showDescription, allowMultiple, sizes, culture
+     * @return ?string Full picker URL, or null if a temporary token could not be obtained
+     **/
+    public function getPickerUrl(array $options): ?string
+    {
+        $token = $this->getTemporaryToken();
+        if (!$token) {
+            return null;
+        }
+
+        $settings = Plugin::$plugin->getSettings();
+        $culture = !empty($options['culture']) ? $options['culture'] : $settings->language;
+
+        $query = http_build_query([
+            'IMAGESHOPTOKEN'     => $token,
+            'SHOWSIZEDIALOGUE'   => !empty($options['showSizeDialogue']) ? 'true' : 'false',
+            'SHOWCROPDIALOGUE'   => !empty($options['showCropDialogue']) ? 'true' : 'false',
+            'SHOWDESCRIPTION'    => !empty($options['showDescription']) ? 'true' : 'false',
+            'IMAGESHOPSIZES'     => (string) ($options['sizes'] ?? ''),
+            'FORMAT'             => 'json',
+            'SETDOMAIN'          => 'false',
+            'CULTURE'            => $culture,
+            'IMAGESHOPLANGUAGE'  => $culture,
+            'ENABLEMULTISELECT'  => !empty($options['allowMultiple']) ? 'true' : 'false',
+        ]);
+
+        return sprintf('%s?%s', 'https://client.imageshop.no/insertimage2.aspx', trim($query, '&'));
     }
     /**
      * Gets a document from the imageshop API

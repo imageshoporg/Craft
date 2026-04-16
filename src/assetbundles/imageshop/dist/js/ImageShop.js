@@ -19,7 +19,7 @@
             $hiddenInput: null,
             $previewInput: null,
             $removeButton: null,
-            $url: null,
+            $pickerOptions: null,
             $popupWindow: null,
             $open: false,
             $name: null,
@@ -31,7 +31,7 @@
                 this.$container = $('[data-id="' + options.namespace + 'imageshop"]');
                 this.$listElement = this.$container.find('[data-imageshop-list]');
 
-                this.$url = options.url;
+                this.$pickerOptions = options.pickerOptions || {};
                 this.$name = options.name;
                 this.$allowMultiple = options.allowMultiple;
                 this.$trigger = this.$container.find(".imageshop-trigger");
@@ -227,16 +227,39 @@
 
             showPopup: function (ev) {
                 ev.preventDefault();
-                this.$open = true;
 
-                // Sensible defaults
+                var self = this;
                 var width = 950;
                 var height = 650;
-
                 var leftPosition = (screen.width) ? (screen.width - width) / 2 : 0;
                 var topPosition = (screen.height) ? (screen.height - height) / 2 : 0;
-                var settings = 'height=' + height + ',width=' + width + ',top=' + topPosition + ',left=' + leftPosition + ',resizable';
-                this.$popupWindow = window.open(this.$url, "imageshop", settings);
+                var popupSettings = 'height=' + height + ',width=' + width + ',top=' + topPosition + ',left=' + leftPosition + ',resizable';
+
+                $.ajax({
+                    url: Craft.getActionUrl('imageshop-dam/picker/get-url'),
+                    method: "POST",
+                    data: self.$pickerOptions,
+                    dataType: "json",
+                    headers: {
+                        "Accept": "application/json",
+                        "X-CSRF-Token": Craft.csrfTokenValue
+                    },
+                    success: function (resp) {
+                        if (!resp || !resp.url) {
+                            var msg = (resp && resp.error) ? resp.error : Craft.t('imageshop-dam', 'Could not open ImageShop picker.');
+                            Craft.cp.displayError(msg);
+                            return;
+                        }
+                        self.$open = true;
+                        self.$popupWindow = window.open(resp.url, "imageshop", popupSettings);
+                    },
+                    error: function (xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.error)
+                            ? xhr.responseJSON.error
+                            : Craft.t('imageshop-dam', 'Could not open ImageShop picker.');
+                        Craft.cp.displayError(msg);
+                    }
+                });
             },
 
             refreshAndStore: function (result, newData) {

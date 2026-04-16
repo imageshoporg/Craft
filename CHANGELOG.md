@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 2.5.1 - 2026-04-16
+### Security
+- The persistent Imageshop API token is no longer exposed in the picker popup URL. Previously `IMAGESHOPTOKEN` was rendered server-side into the entry edit page, leaking the long-lived token to browser history, devtools, referer headers and proxy logs. The field now requests a fresh short-lived token from a new CSRF-protected CP action (`imageshop-dam/picker/get-url`) just before the popup opens, so the long-lived token never leaves the server. Requires no configuration changes.
+
+### Added
+- `PickerController::actionGetUrl` CP action that mints a picker URL with a short-lived token. Requires `accessCp` permission and a valid CSRF token.
+- `services\ImageShop::getPickerUrl($options)` helper that whitelists picker options and builds the popup URL with a fresh temporary token.
+
+### Changed
+- `services\ImageShop::getTemporaryToken()` now explicitly returns `?string` and parses the API response (handles both raw string and JSON-encoded string shapes).
+- `ImageShopField::getInputHtml()` no longer builds the picker URL; it passes non-sensitive `pickerOptions` to the field JS instead.
+- Field JS (`showPopup`) now fetches the picker URL on click via AJAX and displays an error notification if the token cannot be obtained.
+
 ## 2.5.0 - 2026-04-07
 ### Added
 - **Craft CMS 5 support.** The plugin now works on both Craft 4 and Craft 5. Composer requirement updated to `^4.0.0 || ^5.0.0`.

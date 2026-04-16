@@ -19,7 +19,6 @@ use webdna\imageshop\gql\types\ImageShopType;
 use Craft;
 use craft\base\ElementInterface;
 use craft\base\Field;
-use craft\helpers\App;
 use craft\helpers\Db;
 use yii\db\Schema;
 use yii\base\Arrayable;
@@ -173,22 +172,7 @@ class ImageShopField extends Field
     public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
     {
         $settings = ImageShop::$plugin->getSettings();
-        $token = ImageShop::$plugin->service->getTemporaryToken();
-
-        $query = http_build_query([
-            "IMAGESHOPTOKEN" => App::parseEnv($settings->token),
-            "SHOWSIZEDIALOGUE" => $this->showSizeDialogue ? 'true' : 'false',
-            "SHOWCROPDIALOGUE" => $this->showCropDialogue ? 'true' : 'false',
-            "SHOWDESCRIPTION" => $this->showDescription ? 'true' : 'false',
-            "IMAGESHOPSIZES" => $this->sizes,
-            "FORMAT" => "json",
-            "SETDOMAIN" => "false",
-            "CULTURE" => $this->getCurrentAdminLanguage() ?: $settings->language,
-            "IMAGESHOPLANGUAGE" => $this->getCurrentAdminLanguage() ?: $settings->language,
-            "ENABLEMULTISELECT" => $this->allowMultiple ? 'true' : 'false'
-        ]);
-
-        $url = sprintf("%s?%s", "https://client.imageshop.no/insertimage2.aspx", trim($query, "&"));
+        $culture = $this->getCurrentAdminLanguage() ?: $settings->language;
 
         // Register our asset bundle
         Craft::$app->getView()->registerAssetBundle(ImageShopAsset::class);
@@ -203,8 +187,15 @@ class ImageShopField extends Field
             'name' => $this->handle,
             'namespace' => $namespacedId,
             'prefix' => Craft::$app->getView()->namespaceInputId(''),
-            'url' => $url,
             'allowMultiple' => $this->allowMultiple,
+            'pickerOptions' => [
+                'showSizeDialogue' => $this->showSizeDialogue,
+                'showCropDialogue' => $this->showCropDialogue,
+                'showDescription'  => $this->showDescription,
+                'sizes'            => $this->sizes,
+                'allowMultiple'    => $this->allowMultiple,
+                'culture'          => $culture,
+            ],
             ];
         $jsonVars = Json::encode($jsonVars);
         Craft::$app->getView()->registerJs("new Craft.ImageShopDAMField(" . $jsonVars . ");");
