@@ -569,6 +569,32 @@ class ImageShop extends Component
     }
 
     /**
+     * Resolves the Imageshop language code for a given Craft site.
+     * Checks the per-site mapping configured in plugin settings first; falls back to
+     * sanitizing the site's Craft language; finally falls back to the global default.
+     *
+     * @param \craft\models\Site|null $site
+     * @return string
+     **/
+    public function getImageshopLanguageForSite(?\craft\models\Site $site): string
+    {
+        $settings = Plugin::$plugin->getSettings();
+
+        if ($site) {
+            $mapped = $settings->siteLanguages[$site->handle] ?? null;
+            if (is_string($mapped) && $mapped !== '') {
+                return $mapped;
+            }
+            $sanitized = $this->sanitizeLanguage($site->language);
+            if ($sanitized) {
+                return $sanitized;
+            }
+        }
+
+        return $settings->language;
+    }
+
+    /**
      * Gets the recently updated document cache from the db
      *
      * @return array The document cache

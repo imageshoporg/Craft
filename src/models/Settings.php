@@ -31,9 +31,11 @@ class Settings extends Model
     
     public string $language = 'no';
 
+    public array $siteLanguages = [];
+
     public ?int $openGraphFieldId = null;
     public ?int $openGraphGlobalId = null;
-    
+
 
     // Public Methods
     // =========================================================================
@@ -46,6 +48,7 @@ class Settings extends Model
         return [
             [['token', 'key', 'language'], 'string'],
             [['token', 'key', 'language'], 'required'],
+            [['siteLanguages'], 'safe'],
         ];
     }
 

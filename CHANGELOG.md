@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 2.6.0 - 2026-04-20
+### Added
+- **Per-site language mapping.** New plugin setting "Site language mappings" lets editors override which Imageshop language code is used for each Craft site. Example: a Norwegian Bokmål (`nb-NO`) Craft site can be mapped to pull Nynorsk (`nn`) texts from Imageshop. Empty entries fall back to the auto-derived code (existing behavior). Applies to the picker `CULTURE`, admin field labels (`data-current-language`), `ImageShop` model text getters (`getAltText()`, `getDescription()`, `getTitle()`, `getCredits()`, `getRights()`, `getTags()`), and all GraphQL text resolvers.
+- `services\ImageShop::getImageshopLanguageForSite(?Site $site)` resolver: checks the per-site mapping → falls back to `sanitizeLanguage($site->language)` → falls back to the global `$settings->language`.
+- `models\Settings::$siteLanguages` array property (keyed by Craft site handle), exposed in the settings UI as one text input per site with the auto-derived code as placeholder.
+- Optional `$lang` parameter on `models\ImageShop::getAdminLabel($lang = null)`.
+
+### Fixed
+- Admin field card title now respects the site's resolved Imageshop language. Previously, after picking an image, the AJAX re-render path (`ContentController::actionGetImageList`) built fresh `ImageShop` models without a site language, so `getAdminLabel()` fell back to the CP's current-site language (often English) instead of the entry site's mapped Imageshop language. The controller now calls `setSiteLanguage()` on each model and `input-list.twig` passes the template's `language` variable explicitly to `getAdminLabel()`.
+
+### Changed
+- `ImageShopField::getCurrentAdminLanguage()` and `ImageShopField::normalizeValue()` now route through the new `getImageshopLanguageForSite()` resolver instead of calling `sanitizeLanguage()` directly on the site language.
+- `models\ImageShop::getLang()` defaults to the resolver when neither an explicit `$lang` nor a pre-set `_siteLanguage` is available, so models constructed outside `normalizeValue()` still honour the per-site mapping.
+
 ## 2.5.1 - 2026-04-16
 ### Security
 - The persistent Imageshop API token is no longer exposed in the picker popup URL. Previously `IMAGESHOPTOKEN` was rendered server-side into the entry edit page, leaking the long-lived token to browser history, devtools, referer headers and proxy logs. The field now requests a fresh short-lived token from a new CSRF-protected CP action (`imageshop-dam/picker/get-url`) just before the popup opens, so the long-lived token never leaves the server. Requires no configuration changes.

@@ -90,7 +90,7 @@ class ImageShopField extends Field
         if ($element) {
             $site = Craft::$app->getSites()->getSiteById($element->siteId);
             if ($site) {
-                $siteLanguage = $site->language;
+                $siteLanguage = Plugin::getInstance()->service->getImageshopLanguageForSite($site);
             }
         }
 
@@ -228,19 +228,17 @@ class ImageShopField extends Field
         return Type::listOf(ImageShopType::getType());
     }
 
-    public function getCurrentAdminLanguage()
+    public function getCurrentAdminLanguage(): ?string
     {
         $site = null;
         $handle = Craft::$app->request->getParam('site');
-        if($handle){
+        if ($handle) {
             $site = Craft::$app->sites->getSiteByHandle($handle);
         }
-        if(is_null($site)){
+        if (is_null($site)) {
             $site = Craft::$app->sites->getPrimarySite();
         }
-        $language = $site->language;
-        $language = Plugin::getInstance()->service->sanitizeLanguage($language);
-        return $language;
+        return Plugin::getInstance()->service->getImageshopLanguageForSite($site);
     }
 
 }

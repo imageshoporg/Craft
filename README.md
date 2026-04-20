@@ -39,6 +39,10 @@ php craft plugin/install imageshop-dam
 
 - You will now have access to the "Imageshop" in the Field type dropdown on the field creation page.
 
+## Upgrading to 2.6.0
+
+No migrations are required. After updating, you'll see a new **Site language mappings** section on the plugin's settings page — all inputs start empty, so existing installs retain the previous auto-derived language behavior unchanged. See [Per-site language mapping](#per-site-language-mapping) for how to opt in.
+
 ## Upgrading to 2.5.0
 
 After updating the plugin via Composer, run migrations to upgrade field content columns from `TEXT` to `MEDIUMTEXT`:
@@ -74,6 +78,21 @@ To retrieve images from the Imageshop service, you must first create an Imagesho
 In addition to the image itself, metadata such as the image title and alt text are pulled from the service. This texts exists in several languages, and the plugin displays the appropriate version based on the site’s current language. If current site language content was not present in data pulled from service, default language content will be used. Important: Because of technical constraints, the Imageshop field must now be set to translatable.
 
 You can override the image description and alt text by clicking the cog icon that appears in the top‑left corner when you hover over an image in the control panel. Doing so reveals the override input fields. This works for all languages, and you can also provide descriptions and alt text for languages that were not originally available in the Imageshop service.
+
+## Per-site language mapping
+
+By default the plugin derives the Imageshop language code from each Craft site's language — e.g. a site whose Craft language is `nb-NO` reads Imageshop's `no` text block. If that automatic mapping isn't what you want, you can override it per site.
+
+Go to **Settings → Plugins → Imageshop** and scroll to **Site language mappings**. Each Craft site is listed with a text input; the placeholder shows the auto-derived code. Enter the Imageshop language code you want that site to use (for example, `nn` for a Bokmål Craft site that should display Nynorsk metadata, or `en` for a Swedish site as a fallback when no Swedish texts exist in Imageshop). Leave an input empty to keep the auto-derived code.
+
+The mapping applies everywhere the plugin resolves a site's language:
+
+- Picker popup culture (`CULTURE` / `IMAGESHOPLANGUAGE` query params).
+- Admin field labels and the alt-text / description inputs under the cog icon (the `data-current-language` attribute now reflects the mapped code).
+- `ImageShop` model text getters on the front end: `getAltText()`, `getDescription()`, `getTitle()`, `getCredits()`, `getRights()`, `getTags()`.
+- GraphQL text resolvers when querying a specific site (`altText`, `description`, `title`, `credits`, `rights`, `tags`).
+
+Passing an explicit language to a model getter (e.g. `image.getAltText('en')`) still works and takes precedence over the per-site mapping — it's only the default, site-derived code that's overridden.
 
 ## Templating:
 

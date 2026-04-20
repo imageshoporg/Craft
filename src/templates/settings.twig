@@ -53,6 +53,23 @@
     value: settings['language']})
 }}
 
+<hr>
+<h2>{{ 'Site language mappings'|t('imageshop-dam') }}</h2>
+<p class="light">{{ 'Override which Imageshop language code to use for each Craft site. Leave empty to auto-derive from the site’s Craft language.'|t('imageshop-dam') }}</p>
+
+{% for site in sites %}
+    {{ forms.textField({
+        label: site.name ~ ' (' ~ site.craftLanguage ~ ')',
+        id: 'siteLanguages-' ~ site.handle,
+        name: 'siteLanguages[' ~ site.handle ~ ']',
+        value: settings.siteLanguages[site.handle] ?? '',
+        placeholder: site.derived,
+        instructions: ('Imageshop language code (e.g. no, nn, en, sv). Auto-derived: ' ~ site.derived)|t('imageshop-dam'),
+    }) }}
+{% endfor %}
+
+<hr>
+
 {{ forms.selectField({
     label: 'Imageshop field used to generate opengraph image'|t('imageshop-dam'),
     instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.'|t('imageshop-dam'),

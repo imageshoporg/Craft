@@ -259,10 +259,22 @@ class ImageShop extends Plugin
      */
     protected function settingsHtml(): string
     {
+        $service = $this->service;
+        $sites = [];
+        foreach (Craft::$app->getSites()->getAllSites() as $site) {
+            $sites[] = [
+                'handle' => $site->handle,
+                'name' => $site->name,
+                'craftLanguage' => $site->language,
+                'derived' => $service->sanitizeLanguage($site->language) ?? '',
+            ];
+        }
+
         return Craft::$app->view->renderTemplate(
             'imageshop-dam/settings',
             [
-                'settings' => $this->getSettings()
+                'settings' => $this->getSettings(),
+                'sites' => $sites,
             ]
         );
     }

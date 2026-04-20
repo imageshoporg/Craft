@@ -58,7 +58,13 @@ class ContentController extends Controller
         $json = $request->getBodyParam('jsonData');
         $language = $request->getBodyParam('language');
 
-        $images = array_map(fn($image) => new ImageShopModel($image), array_filter($json, fn($image) => !empty($image)));
+        $images = array_map(function ($image) use ($language) {
+            $model = new ImageShopModel($image);
+            if (is_string($language) && $language !== '') {
+                $model->setSiteLanguage($language);
+            }
+            return $model;
+        }, array_filter($json, fn($image) => !empty($image)));
 
         $view = Craft::$app->getView();
         $html = $view->renderTemplate('imageshop-dam/_components/fields/input-list.twig', [

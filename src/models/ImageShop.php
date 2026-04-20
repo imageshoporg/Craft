@@ -132,10 +132,14 @@ class ImageShop extends Model implements Serializable
 
     protected function getLang($lang = null): ?string
     {
-        if(is_null($lang)){
-            $lang = $this->_siteLanguage ?? Craft::$app->getSites()->getCurrentSite()->language;
+        if (!is_null($lang)) {
+            return Plugin::getInstance()->service->sanitizeLanguage($lang);
         }
-        return Plugin::getInstance()->service->sanitizeLanguage($lang);
+        if ($this->_siteLanguage) {
+            return $this->_siteLanguage;
+        }
+        $site = Craft::$app->getSites()->getCurrentSite();
+        return Plugin::getInstance()->service->getImageshopLanguageForSite($site);
     }
 
     public function getTags($lang = null): array
@@ -190,14 +194,14 @@ class ImageShop extends Model implements Serializable
         return $this->_json["text"][$lang][$key];
     }
 
-    public function getAdminLabel()
+    public function getAdminLabel($lang = null)
     {
-        $description = $this->getDescription();
-        if($description){
+        $description = $this->getDescription($lang);
+        if ($description) {
             return $description;
         }
-        $title = $this->getTitle();
-        if(!empty($title)){
+        $title = $this->getTitle($lang);
+        if (!empty($title)) {
             return $title;
         }
         return $this->getCode();
