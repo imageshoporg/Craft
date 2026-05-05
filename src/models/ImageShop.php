@@ -196,13 +196,13 @@ class ImageShop extends Model implements Serializable
 
     public function getAdminLabel($lang = null)
     {
-        $description = $this->getDescription($lang);
-        if ($description) {
-            return $description;
-        }
         $title = $this->getTitle($lang);
         if (!empty($title)) {
             return $title;
+        }
+        $description = $this->getDescription($lang);
+        if ($description) {
+            return $description;
         }
         return $this->getCode();
     }
