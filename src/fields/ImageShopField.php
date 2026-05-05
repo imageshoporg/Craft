@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -11,6 +11,7 @@
 namespace webdna\imageshop\fields;
 
 use webdna\imageshop\ImageShop;
+use webdna\imageshop\ImageShop as Plugin;
 use webdna\imageshop\models\ImageShop as Model;
 use webdna\imageshop\assetbundles\imageshop\ImageShopAsset;
 use webdna\imageshop\gql\types\ImageShopType;
@@ -18,7 +19,6 @@ use webdna\imageshop\gql\types\ImageShopType;
 use Craft;
 use craft\base\ElementInterface;
 use craft\base\Field;
-use craft\helpers\App;
 use craft\helpers\Db;
 use yii\db\Schema;
 use yii\base\Arrayable;
@@ -27,7 +27,7 @@ use GraphQL\Type\Definition\Type;
 
 /**
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 class ImageShopField extends Field
@@ -39,69 +39,114 @@ class ImageShopField extends Field
 
     public bool $showCropDialogue = false;
 
-    public bool $showDescription = false;
-
-    public bool $showCredits = false;
-
     public bool $allowMultiple = false;
+
+    public bool $showDescription = false;
 
     public string $sizes = 'Normal;1920x0';
 
+    private static array $_removedSettings = ['showCredits'];
 
     // Static Methods
     // =========================================================================
 
     public static function displayName(): string
     {
-        return Craft::t('imageshop-dam', 'ImageShop DAM');
+        return Craft::t('imageshop-dam', 'Imageshop DAM');
     }
 
     // Public Methods
     // =========================================================================
 
-
-    /**
-     * @inheritdoc
-     */
-    public function getContentColumnType(): array|string
+    public function __set($name, $value)
     {
-        return Schema::TYPE_TEXT;
+        if (in_array($name, self::$_removedSettings, true)) {
+            return;
+        }
+        parent::__set($name, $value);
     }
 
     /**
      * @inheritdoc
      */
-    public function normalizeValue($value, ElementInterface $element = null): Model|array|null
+    // Craft 4
+    public function getContentColumnType(): array|string
     {
-        
-        if ($value instanceof Model) {
-            return [$value];
-        }
-        // its already an array of models
-        if (is_array($value) && array_is_list($value)) {
-            return array_filter($value, fn($image) => $image instanceof Model);
-        }
+        return 'mediumtext';
+    }
 
-        if (is_string($value) && Json::isJsonObject($value)) {
-            $json = Json::decode($value);
-            if (array_is_list($json)) {
-                $filtered = array_map(fn($image) => new Model($image), array_filter($json, fn($image) => !empty($image)));            
-                return $filtered;
+    // Craft 5
+    public static function dbType(): array|string|null
+    {
+        return 'mediumtext';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function normalizeValue(mixed $value, ?ElementInterface $element = null): mixed
+    {
+        $siteLanguage = null;
+        if ($element) {
+            $site = Craft::$app->getSites()->getSiteById($element->siteId);
+            if ($site) {
+                $siteLanguage = Plugin::getInstance()->service->getImageshopLanguageForSite($site);
             }
         }
 
-        return [new Model($value)];
+        $models = null;
 
+        if ($value instanceof Model) {
+            $models = [$value];
+        } elseif (is_array($value) && array_is_list($value)) {
+            $models = array_filter($value, fn($image) => $image instanceof Model);
+            if (empty($models)) {
+                // Craft 5: array of JSON strings or decoded associative arrays
+                $models = [];
+                foreach (array_filter($value, fn($v) => !empty($v)) as $item) {
+                    if (is_string($item)) {
+                        $decoded = Json::decodeIfJson($item);
+                        if (is_array($decoded)) {
+                            $models[] = new Model($decoded);
+                        }
+                    } elseif (is_array($item)) {
+                        $models[] = new Model($item);
+                    }
+                }
+            }
+        } elseif (is_string($value) && Json::isJsonObject($value)) {
+            $json = Json::decode($value);
+            if (array_is_list($json)) {
+                $models = array_map(fn($image) => new Model($image), array_filter($json, fn($image) => !empty($image)));
+            }
+        } elseif (is_null($value)) {
+            return [];
+        }
+
+        if ($models === null) {
+            $models = [new Model($value)];
+        }
+
+        if ($siteLanguage) {
+            foreach ($models as $model) {
+                $model->setSiteLanguage($siteLanguage);
+            }
+        }
+
+        if (!$this->allowMultiple && count($models) > 1) {
+            $models = array_slice($models, 0, 1);
+        }
+
+        return $models;
     }
 
     /**
      * @inheritdoc
      */
-    public function serializeValue($value, ElementInterface $element = null): mixed
+    public function serializeValue(mixed $value, ?ElementInterface $element = null): mixed
     {
-        // If it's "arrayable", convert to array
         if (is_array($value)) {
-            return array_map(fn($image) => $image->serialize(), $value);
+            return array_map(fn($image) => $image instanceof Model ? $image->serialize() : $image, $value);
         }
 
         return parent::serializeValue($value, $element);
@@ -124,25 +169,10 @@ class ImageShopField extends Field
     /**
      * @inheritdoc
      */
-    public function getInputHtml($value, ElementInterface $element = null): string
+    public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
     {
         $settings = ImageShop::$plugin->getSettings();
-        $token = ImageShop::$plugin->service->getTemporaryToken();
-
-        $query = http_build_query([
-            "IMAGESHOPTOKEN" => App::parseEnv($settings->token),
-            "SHOWSIZEDIALOGUE" => $this->showSizeDialogue ? 'true' : 'false',
-            "SHOWCROPDIALOGUE" => $this->showCropDialogue ? 'true' : 'false',
-            "IMAGESHOPSIZES" => $this->sizes,
-            "SHOWDESCRIPTION" => $this->showDescription ? 'true' : 'false',
-            "SHOWCREDITS" => $this->showCredits ? 'true' : 'false',
-            "FORMAT" => "json",
-            "SETDOMAIN" => "false",
-            "CULTURE" => $settings->language,
-            "ENABLEMULTISELECT" => $this->allowMultiple ? 'true' : 'false'
-        ]);
-
-        $url = sprintf("%s?%s", "https://client.imageshop.no/insertimage2.aspx", trim($query, "&"));
+        $culture = $this->getCurrentAdminLanguage() ?: $settings->language;
 
         // Register our asset bundle
         Craft::$app->getView()->registerAssetBundle(ImageShopAsset::class);
@@ -157,10 +187,24 @@ class ImageShopField extends Field
             'name' => $this->handle,
             'namespace' => $namespacedId,
             'prefix' => Craft::$app->getView()->namespaceInputId(''),
-            'url' => $url,
+            'allowMultiple' => $this->allowMultiple,
+            'pickerOptions' => [
+                'showSizeDialogue' => $this->showSizeDialogue,
+                'showCropDialogue' => $this->showCropDialogue,
+                'showDescription'  => $this->showDescription,
+                'sizes'            => $this->sizes,
+                'allowMultiple'    => $this->allowMultiple,
+                'culture'          => $culture,
+            ],
             ];
         $jsonVars = Json::encode($jsonVars);
         Craft::$app->getView()->registerJs("new Craft.ImageShopDAMField(" . $jsonVars . ");");
+
+        $value = array_filter($value, function($single){
+            return !is_null($single->getJson());
+        });
+
+        $valueArray = array_map(fn($image) => $image->getJson(), $value);
 
         // Render the input template
         return Craft::$app->getView()->renderTemplate(
@@ -168,6 +212,7 @@ class ImageShopField extends Field
             [
                 'name' => $this->handle,
                 'value' => $value,
+                'valueArray' => $valueArray,
                 'field' => $this,
                 'id' => $id,
                 'namespace' => $namespacedId,
@@ -181,6 +226,19 @@ class ImageShopField extends Field
     public function getContentGqlType(): Type|array
     {
         return Type::listOf(ImageShopType::getType());
+    }
+
+    public function getCurrentAdminLanguage(): ?string
+    {
+        $site = null;
+        $handle = Craft::$app->request->getParam('site');
+        if ($handle) {
+            $site = Craft::$app->sites->getSiteByHandle($handle);
+        }
+        if (is_null($site)) {
+            $site = Craft::$app->sites->getPrimarySite();
+        }
+        return Plugin::getInstance()->service->getImageshopLanguageForSite($site);
     }
 
 }

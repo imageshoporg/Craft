@@ -22,7 +22,7 @@ class ImageShopType
         return GqlEntityRegistry::createEntity(self::class, new ObjectType([
             'name'   => static::getName(),
             'fields' => self::class . '::getFieldDefinitions',
-            'description' => 'The interface implemented by all ImageShop types.',
+            'description' => 'The interface implemented by all Imageshop types.',
         ]));
     }
 
@@ -38,18 +38,104 @@ class ImageShopType
                 'name' => 'credits',
                 'type' => Type::string(),
                 'description' => 'The credits for the image.',
+                'resolve' => function ($source) {
+                    return $source->getCredits();
+                },
             ],
             'description' => [
                 'name' => 'description',
                 'type' => Type::string(),
                 'description' => 'The description of the image.',
+                'resolve' => function ($source) {
+                    return $source->getDescription();
+                },
             ],
             'data' => [
                 'name' => 'data',
                 'type' => Type::string(),
                 'description' => 'The raw json.',
             ],
+            'title' => [
+                'name' => 'title',
+                'type' => Type::string(),
+                'description' => 'The title of the image.',
+                'resolve' => function ($source) {
+                    return $source->getTitle();
+                },
+            ],
+            'altText' => [
+                'name' => 'altText',
+                'type' => Type::string(),
+                'description' => 'The alt text for the image.',
+                'resolve' => function ($source) {
+                    return $source->getAltText();
+                },
+            ],
+            'width' => [
+                'name' => 'width',
+                'type' => Type::string(),
+                'description' => 'The image width.',
+            ],
+            'height' => [
+                'name' => 'height',
+                'type' => Type::string(),
+                'description' => 'The image height.',
+            ],
+            'code' => [
+                'name' => 'code',
+                'type' => Type::string(),
+                'description' => 'The image code.',
+            ],
+            'documentId' => [
+                'name' => 'documentId',
+                'type' => Type::string(),
+                'description' => 'The document ID.',
+            ],
+            'rights' => [
+                'name' => 'rights',
+                'type' => Type::string(),
+                'description' => 'The rights information for the image.',
+                'resolve' => function ($source) {
+                    return $source->getRights();
+                },
+            ],
+            'tags' => [
+                'name' => 'tags',
+                'type' => Type::listOf(Type::string()),
+                'description' => 'The tags for the image.',
+                'resolve' => function ($source) {
+                    return $source->getTags();
+                },
+            ],
+            'resizedUrl' => [
+                'name' => 'resizedUrl',
+                'type' => Type::string(),
+                'description' => 'A resized image URL at the specified dimensions.',
+                'args' => [
+                    'width' => [
+                        'type' => Type::nonNull(Type::int()),
+                        'description' => 'Desired width in pixels.',
+                    ],
+                    'height' => [
+                        'type' => Type::int(),
+                        'description' => 'Desired height in pixels (0 for auto).',
+                    ],
+                ],
+                'resolve' => function ($source, array $args) {
+                    $width = $args['width'];
+                    $height = $args['height'] ?? 0;
+                    return $source->getResizedUrl($width, $height);
+                },
+            ],
+            'focalPoint' => [
+                'name' => 'focalPoint',
+                'type' => Type::string(),
+                'description' => 'The focal point as JSON with x/y percentages (0-100) for CSS object-position.',
+                'resolve' => function ($source) {
+                    $fp = $source->getFocalPoint();
+                    return $fp !== null ? json_encode($fp) : null;
+                },
+            ],
         ];
     }
 }
-

@@ -1,8 +1,8 @@
 <?php
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Integration for CraftCMS
+ * Imageshop Integration for CraftCMS
  *
  * @link      https://webdna.co.uk
  * @copyright Copyright (c) 2022 WebDNA
@@ -17,7 +17,7 @@ use craft\base\Model;
 
 /**
  * @author    WebDNA
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 class Settings extends Model
@@ -30,7 +30,12 @@ class Settings extends Model
     public string $key = '';
     
     public string $language = 'no';
-    
+
+    public array $siteLanguages = [];
+
+    public ?int $openGraphFieldId = null;
+    public ?int $openGraphGlobalId = null;
+
 
     // Public Methods
     // =========================================================================
@@ -43,6 +48,51 @@ class Settings extends Model
         return [
             [['token', 'key', 'language'], 'string'],
             [['token', 'key', 'language'], 'required'],
+            [['siteLanguages'], 'safe'],
         ];
+    }
+
+    public function getOpengraphFieldOptions()
+    {
+        $fields = \Craft::$app->fields->getAllFields();
+        $fields = array_filter($fields, function($field){
+            return get_class($field) == \webdna\imageshop\fields\ImageShopField::class;
+        });
+
+        $options = [
+            [
+                'value' => null,
+                'label' => Craft::t('imageshop-dam', 'Select'),
+            ]
+        ];
+
+        $optionsFields = array_map(function($field){
+            return [
+                'value' => $field->id,
+                'label' => $field->name,
+            ];
+        }, $fields);
+        $options = array_merge($options, $optionsFields);
+        return $options;
+    }
+
+    public function getOpengraphGlobalOptions()
+    {
+        $allSets = Craft::$app->globals->getAllSets();
+        $options = [
+            [
+                'value' => null,
+                'label' => Craft::t('imageshop-dam', 'Select'),
+            ]
+        ];
+
+        $optionsFields = array_map(function($field){
+            return [
+                'value' => $field->id,
+                'label' => $field->name,
+            ];
+        }, $allSets);
+        $options = array_merge($options, $optionsFields);
+        return $options;
     }
 }

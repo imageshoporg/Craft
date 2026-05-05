@@ -12,13 +12,13 @@ use webdna\imageshop\ImageShop;
  */
 class UpdateCache extends BaseJob
 {
-    function execute($queue): void
+    public function execute($queue): void
     {
         ImageShop::getInstance()->service->updateRecentlyUpdatedCache();
     }
 
     protected function defaultDescription(): ?string
     {
-        return "Getting recently changed ImageShop Dam documents";
+        return Craft::t('imageshop-dam', 'Getting recently changed Imageshop DAM documents');
     }
 }

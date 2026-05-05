@@ -1,14 +1,14 @@
 {# @var craft \craft\web\twig\variables\CraftVariable #}
 {#
 /**
- * ImageShop plugin for Craft CMS 3.x
+ * Imageshop plugin for Craft CMS 3.x
  *
- * ImageShop Settings.twig
+ * Imageshop Settings.twig
  *
  * @author    WebDNA
  * @copyright Copyright (c) 2022 WebDNA
  * @link      https://webdna.co.uk
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 #}
@@ -16,8 +16,8 @@
 {% import "_includes/forms" as forms %}
 
 {{ forms.autosuggestField({
-    label: 'Token'|t,
-    instructions: 'Imageshop token',
+    label: 'Token'|t('imageshop-dam'),
+    instructions: 'Imageshop token'|t('imageshop-dam'),
     id: 'token',
     name: 'token',
     suggestEnvVars: true,
@@ -26,8 +26,8 @@
 }}
 
 {{ forms.autosuggestField({
-    label: 'Key'|t,
-    instructions: 'Imageshop private key',
+    label: 'Key'|t('imageshop-dam'),
+    instructions: 'Imageshop private key'|t('imageshop-dam'),
     id: 'key',
     name: 'key',
     suggestEnvVars: true,
@@ -37,18 +37,53 @@
 
 {% set languages = [
   {
-    label: 'Norwegian'|t,
+    label: 'Norwegian'|t('imageshop-dam'),
     value: 'nb-NO'
   }, {
-    label: 'English'|t,
+    label: 'English'|t('imageshop-dam'),
     value: 'en-US'
   }
 ] %}
 
 {{ forms.selectField({
-    label: 'Language'|t,
+    label: 'Language'|t('imageshop-dam'),
     id: 'language',
     name: 'language',
     options: languages,
     value: settings['language']})
+}}
+
+<hr>
+<h2>{{ 'Site language mappings'|t('imageshop-dam') }}</h2>
+<p class="light">{{ 'Override which Imageshop language code to use for each Craft site. Leave empty to auto-derive from the site’s Craft language.'|t('imageshop-dam') }}</p>
+
+{% for site in sites %}
+    {{ forms.textField({
+        label: site.name ~ ' (' ~ site.craftLanguage ~ ')',
+        id: 'siteLanguages-' ~ site.handle,
+        name: 'siteLanguages[' ~ site.handle ~ ']',
+        value: settings.siteLanguages[site.handle] ?? '',
+        placeholder: site.derived,
+        instructions: ('Imageshop language code (e.g. no, nn, en, sv). Auto-derived: ' ~ site.derived)|t('imageshop-dam'),
+    }) }}
+{% endfor %}
+
+<hr>
+
+{{ forms.selectField({
+    label: 'Imageshop field used to generate opengraph image'|t('imageshop-dam'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.'|t('imageshop-dam'),
+    id: 'openGraphFieldId',
+    name: 'openGraphFieldId',
+    options: settings.getOpengraphFieldOptions(),
+    value: settings.openGraphFieldId})
+}}
+
+{{ forms.selectField({
+    label: 'Global set which will be used as source for the default opengraph image.'|t('imageshop-dam'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. This global must have imageshop field assigned and will be used only if current element does not have its own specific opengraph defined by its Imageshop field.'|t('imageshop-dam'),
+    id: 'openGraphGlobalId',
+    name: 'openGraphGlobalId',
+    options: settings.getOpengraphGlobalOptions(),
+    value: settings.openGraphGlobalId})
 }}

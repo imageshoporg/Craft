@@ -13,10 +13,10 @@ class ImageShop extends Utility
 {
     public static function displayName(): string
     {
-        return Craft::t('imageshop-dam', 'ImageShop');
+        return Craft::t('imageshop-dam', 'Imageshop');
     }
 
-    static function id(): string
+    public static function id(): string
     {
         return 'imageshop-dam';
     }
@@ -26,17 +26,13 @@ class ImageShop extends Utility
         return null;
     }
 
-    static function contentHtml(): string
+    public static function contentHtml(): string
     {
-        $view = Craft::$app->getView();
-        $documentCacheExists = !empty(Plugin::getInstance()->service->getDocumentCache());
-        return $view->renderTemplate(
+        return Craft::$app->getView()->renderTemplate(
             'imageshop-dam/_components/utilities/index.twig',
             [
-                'canRunDbUpdate' => $documentCacheExists
+                'syncLog' => Plugin::getInstance()->service->getSyncLog(),
             ]
         );
     }
 }
-
-

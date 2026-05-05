@@ -1,14 +1,14 @@
 {# @var craft \craft\web\twig\variables\CraftVariable #}
 {#
 /**
- * ImageShop plugin for Craft CMS
+ * Imageshop plugin for Craft CMS
  *
  * ImageShopField Field Settings
  *
  * @author    WebDNA
  * @copyright Copyright (c) 2022 WebDNA
  * @link      https://webdna.co.uk
- * @package   ImageShop
+ * @package   Imageshop
  * @since     2.0.0
  */
 #}
@@ -23,43 +23,36 @@
 }) }} #}
 
 {{ forms.textField({
-    label: 'Sizes',
-    instructions: 'Predefined sizes the user can choose from.',
+    label: 'Sizes'|t('imageshop-dam'),
+    instructions: 'Predefined sizes the user can choose from.'|t('imageshop-dam'),
     name: 'sizes',
     value: field['sizes']
 }) }}
 
 {{ forms.lightswitchField({
-    label: 'Show Crop Dialogue?',
-    instructions: "Indicates whether the size dialogue should be shown.",
-    name: 'showCropDialogue',
-    on: field['showCropDialogue']
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Show Size Dialogue?',
-    instructions: 'Indicates whether the crop dialogue should be shown',
-    name: 'showSizeDialogue',
-    on: field['showSizeDialogue']
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Show Description?',
-    instructions: 'Indicates whether the description should be shown and editable',
+    label: 'Edit description before insert?'|t('imageshop-dam'),
+    instructions: 'Indicates whether the description field should be editable when inserting an image.'|t('imageshop-dam'),
     name: 'showDescription',
     on: field['showDescription']
 }) }}
 
 {{ forms.lightswitchField({
-    label: 'Show Credits?',
-    instructions: 'Indicates whether the credits should be shown and editable',
-    name: 'showCredits',
-    on: field['showCredits']
+    label: 'Show Crop Dialogue?'|t('imageshop-dam'),
+    instructions: 'Indicates whether the crop dialogue should be shown.'|t('imageshop-dam'),
+    name: 'showCropDialogue',
+    on: field['showCropDialogue']
 }) }}
 
 {{ forms.lightswitchField({
-    label: 'Allow multiple?',
-    instructions: 'Indicates whether the field should allow multiple images',
+    label: 'Show Size Dialogue?'|t('imageshop-dam'),
+    instructions: 'Indicates whether the size dialogue should be shown.'|t('imageshop-dam'),
+    name: 'showSizeDialogue',
+    on: field['showSizeDialogue']
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Allow multiple?'|t('imageshop-dam'),
+    instructions: 'Indicates whether the field should allow multiple images'|t('imageshop-dam'),
     name: 'allowMultiple',
     on: field['allowMultiple']
 }) }}

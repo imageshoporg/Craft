@@ -1,33 +1,94 @@
-<h2 class="first">{{ 'Fetch latest document changes from ImageShop'|t('imageshop-dam') }}</h2>
-<form class="utility" method="post" accept-charset="UTF-8" style="margin-top: 2rem;">
-
-    {{ actionInput('imageshop-dam/default/get-changed-documents') }}
-    {{ csrfInput() }}
-    {{ redirectInput('utilities/imageshop-dam') }}
-
-    <div class="buttons">
-        <button type="submit" class="btn submit">{{ 'Fetch updated documents'|t('imageshop-dam') }}</button>
-        <div class="utility-status"></div>
-    </div>
-</form>
-
-<hr/>
-
-<h2>{{ 'Update ImageShop images in database'|t('imageshop-dam') }}</h2>
-
-{% if not canRunDbUpdate %}
-    <p>{{ 'Please fetch the updated documents from imageshop servers before updating images in the database'|t('imageshop-dam') }}</p>
-{% else %}
-
-<form class="utility" method="post" accept-charset="UTF-8" style="margin-top: 2rem;">
+<form class="" method="post" accept-charset="UTF-8">
 
     {{ actionInput('imageshop-dam/default/create-sync-jobs') }}
     {{ csrfInput() }}
     {{ redirectInput('utilities/imageshop-dam') }}
-    
-    <div class="buttons">
-        <button type="submit" class="btn submit">{{ 'Sync images'|t('imageshop-dam') }}</button>
-        <div class="utility-status"></div>
+
+    <div>
+        {{ 'This will fetch the latest metadata from the Imageshop API and update all Imageshop fields in Craft, including alternative text, descriptions, credits, and tags.'|t('imageshop-dam') }}
+        <br>
+        <strong>
+            {{ 'Important: This action cannot be undone. Manual edits to metadata will be overwritten.'|t('imageshop-dam') }}
+        </strong>
+    </div>
+
+    <br>
+
+    <div class="">
+        <button type="submit" class="btn submit">{{ 'Sync metadata'|t('imageshop-dam') }}</button>
     </div>
 </form>
+
+<hr>
+
+<h2>{{ 'Sync history'|t('imageshop-dam') }}</h2>
+
+{% if syncLog is empty %}
+    <p class="zilch">{{ 'No syncs have been run yet.'|t('imageshop-dam') }}</p>
+{% else %}
+    <table class="data fullwidth">
+        <thead>
+            <tr>
+                <th>{{ 'Date'|t('imageshop-dam') }}</th>
+                <th>{{ 'Documents changed'|t('imageshop-dam') }}</th>
+                <th>{{ 'Jobs queued'|t('imageshop-dam') }}</th>
+                <th>{{ 'Status'|t('imageshop-dam') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in syncLog %}
+                {% set hasDetails = entry.details is defined and entry.details is iterable and entry.details|length > 0 %}
+                <tr{% if hasDetails %} class="is-sync-toggle" style="cursor: pointer;" data-sync-idx="{{ loop.index }}"{% endif %}>
+                    <td>
+                        {% if hasDetails %}
+                            <span class="sync-toggle-icon" data-sync-idx="{{ loop.index }}">&#x25b8;</span>
+                        {% endif %}
+                        {{ entry.dateCreated|date('short') }} {{ entry.dateCreated|time('short') }}
+                    </td>
+                    <td>{{ entry.documentsChanged }}</td>
+                    <td>{{ entry.jobsQueued }}</td>
+                    <td>
+                        {% if entry.status == 'success' %}
+                            <span class="status green"></span> {{ 'Success'|t('imageshop-dam') }}
+                        {% else %}
+                            <span class="status light"></span> {{ 'No changes'|t('imageshop-dam') }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if hasDetails %}
+                    <tr class="sync-details" data-sync-idx="{{ loop.index }}" style="display: none;">
+                        <td colspan="4" style="padding: 0 0 0 24px;">
+                            <ul style="margin: 8px 0; list-style: none; padding: 0;">
+                                {% for doc in entry.details %}
+                                    <li style="padding: 2px 0; color: #8f98a3;">
+                                        {% if loop.last %}&#x2514;{% else %}&#x251c;{% endif %}
+                                        {{ 'Document'|t('imageshop-dam') }} {{ doc.documentId }} &mdash; {{ doc.name }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+    (function() {
+        document.querySelectorAll('tr.is-sync-toggle').forEach(function(row) {
+            row.addEventListener('click', function() {
+                var idx = this.dataset.syncIdx;
+                var detail = document.querySelector('tr.sync-details[data-sync-idx="' + idx + '"]');
+                var icon = this.querySelector('.sync-toggle-icon');
+                if (detail.style.display === 'none') {
+                    detail.style.display = '';
+                    icon.textContent = '\u25be';
+                } else {
+                    detail.style.display = 'none';
+                    icon.textContent = '\u25b8';
+                }
+            });
+        });
+    })();
+    </script>
 {% endif %}
