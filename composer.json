@@ -1,6 +1,5 @@
 {
     "name": "webdna/imageshop-dam",
-    "version": "3.0.0",
     "description": "Imageshop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
@@ -11,7 +10,7 @@
         "imageshop"
     ],
     "support": {
-        "docs": "https://github.com/imageshoporg/Craft/blob/update/craft4/README.md",
+        "docs": "https://github.com/imageshoporg/Craft/blob/main/README.md",
         "issues": "https://github.com/imageshoporg/Craft/issues"
     },
     "license": "proprietary",
@@ -34,7 +33,7 @@
         "handle": "imageshop-dam",
         "developer": "WebDNA",
         "developerUrl": "https://www.imageshop.org",
-        "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/update/craft4/CHANGELOG.md",
+        "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/main/CHANGELOG.md",
         "class": "webdna\\imageshop\\ImageShop"
     }
 }
