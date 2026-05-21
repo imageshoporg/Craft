@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## 3.0.0 - 2026-05-21
+### Added
+Updating packagist setup and release for main to support craft 4 and craft 5.
+
 ## 2.6.0 - 2026-04-20
 ### Added
 - **Per-site language mapping.** New plugin setting "Site language mappings" lets editors override which Imageshop language code is used for each Craft site. Example: a Norwegian Bokmål (`nb-NO`) Craft site can be mapped to pull Nynorsk (`nn`) texts from Imageshop. Empty entries fall back to the auto-derived code (existing behavior). Applies to the picker `CULTURE`, admin field labels (`data-current-language`), `ImageShop` model text getters (`getAltText()`, `getDescription()`, `getTitle()`, `getCredits()`, `getRights()`, `getTags()`), and all GraphQL text resolvers.
