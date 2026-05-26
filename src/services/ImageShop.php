@@ -4,15 +4,15 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop\services;
+namespace Imageshop\Imageshop\services;
 
-use webdna\imageshop\fields\ImageShopField;
-use webdna\imageshop\ImageShop as Plugin;
-use webdna\imageshop\jobs\Sync;
+use Imageshop\Imageshop\fields\ImageShopField;
+use Imageshop\Imageshop\ImageShop as Plugin;
+use Imageshop\Imageshop\jobs\Sync;
 
 use Craft;
 use craft\base\Component;
@@ -26,7 +26,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */

@@ -1,6 +1,6 @@
 <?php
 
-namespace webdna\imageshop\migrations;
+namespace Imageshop\Imageshop\migrations;
 
 use craft\db\Migration;
 

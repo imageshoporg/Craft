@@ -4,17 +4,17 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop\fields;
+namespace Imageshop\Imageshop\fields;
 
-use webdna\imageshop\ImageShop;
-use webdna\imageshop\ImageShop as Plugin;
-use webdna\imageshop\models\ImageShop as Model;
-use webdna\imageshop\assetbundles\imageshop\ImageShopAsset;
-use webdna\imageshop\gql\types\ImageShopType;
+use Imageshop\Imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop as Plugin;
+use Imageshop\Imageshop\models\ImageShop as Model;
+use Imageshop\Imageshop\assetbundles\imageshop\ImageShopAsset;
+use Imageshop\Imageshop\gql\types\ImageShopType;
 
 use Craft;
 use craft\base\ElementInterface;
@@ -26,7 +26,7 @@ use craft\helpers\Json;
 use GraphQL\Type\Definition\Type;
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */

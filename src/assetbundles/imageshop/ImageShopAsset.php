@@ -4,18 +4,18 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop\assetbundles\imageshop;
+namespace Imageshop\Imageshop\assetbundles\imageshop;
 
 use Craft;
 use craft\web\AssetBundle;
 use craft\web\assets\cp\CpAsset;
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */
@@ -29,7 +29,7 @@ class ImageShopAsset extends AssetBundle
      */
     public function init()
     {
-        $this->sourcePath = "@webdna/imageshop/assetbundles/imageshop/dist";
+        $this->sourcePath = __DIR__ . '/dist';
 
         $this->depends = [
             CpAsset::class,

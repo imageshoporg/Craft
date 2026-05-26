@@ -1,10 +1,10 @@
 <?php
 
-namespace webdna\imageshop\controllers;
+namespace Imageshop\Imageshop\controllers;
 use craft\web\Controller;
 use Craft;
-use webdna\imageshop\ImageShop;
-use webdna\imageshop\models\ImageShop as ImageShopModel;
+use Imageshop\Imageshop\ImageShop;
+use Imageshop\Imageshop\models\ImageShop as ImageShopModel;
 
 
 class ContentController extends Controller

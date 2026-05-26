@@ -1,5 +1,5 @@
 {
-    "name": "webdna/imageshop-dam",
+    "name": "imageshop/imageshop-dam",
     "description": "Imageshop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
@@ -25,15 +25,15 @@
     },
     "autoload": {
         "psr-4": {
-          "webdna\\imageshop\\": "src/"
+          "Imageshop\\Imageshop\\": "src/"
         }
     },
     "extra": {
         "name": "Imageshop",
         "handle": "imageshop-dam",
-        "developer": "WebDNA",
+        "developer": "Imageshop",
         "developerUrl": "https://www.imageshop.org",
         "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/main/CHANGELOG.md",
-        "class": "webdna\\imageshop\\ImageShop"
+        "class": "Imageshop\\Imageshop\\ImageShop"
     }
 }

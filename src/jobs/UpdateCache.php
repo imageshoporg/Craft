@@ -1,10 +1,10 @@
 <?php
 
-namespace webdna\imageshop\jobs;
+namespace Imageshop\Imageshop\jobs;
 
 use Craft;
 use craft\queue\BaseJob;
-use webdna\imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop;
 
 /**
  * Gets all the data of documents that have chagned since the last time the scan 

@@ -4,13 +4,13 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop\models;
+namespace Imageshop\Imageshop\models;
 
-use webdna\imageshop\ImageShop as Plugin;
+use Imageshop\Imageshop\ImageShop as Plugin;
 
 use Craft;
 use craft\base\Model;
@@ -18,7 +18,7 @@ use craft\base\Serializable;
 use craft\helpers\Json;
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */
