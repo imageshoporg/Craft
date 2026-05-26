@@ -24,7 +24,7 @@ cd /path/to/project
 - Then tell Composer to load the plugin:
 
 ```
-composer require imageshop/imageshop
+composer require imageshop/imageshop-dam
 ```
 
 - In the Control Panel, go to Settings → Plugins and click the “Install” button for 'Imageshop'.
@@ -45,7 +45,7 @@ No migrations are required. After updating, you'll see a new **Site language map
 
 ## Upgrading from `webdna/imageshop-dam`
 
-This repository now uses `imageshop/imageshop` as the Composer package name and `Imageshop\Imageshop\...` as the PHP namespace.
+This repository now uses `imageshop/imageshop-dam` as the Composer package name and `Imageshop\Imageshop\...` as the PHP namespace.
 
 In your Craft project (not in this plugin repository), run:
 
