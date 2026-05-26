@@ -10,8 +10,6 @@
 
 namespace Imageshop\Imageshop\models;
 
-use Imageshop\Imageshop\ImageShop;
-
 use Craft;
 use craft\base\Model;
 
