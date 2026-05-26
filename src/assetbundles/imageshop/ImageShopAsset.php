@@ -29,7 +29,7 @@ class ImageShopAsset extends AssetBundle
      */
     public function init()
     {
-        $this->sourcePath = "@Imageshop/Imageshop/assetbundles/imageshop/dist";
+        $this->sourcePath = __DIR__ . '/dist';
 
         $this->depends = [
             CpAsset::class,
