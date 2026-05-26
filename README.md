@@ -24,7 +24,7 @@ cd /path/to/project
 - Then tell Composer to load the plugin:
 
 ```
-composer require webdna/imageshop-dam
+composer require imageshop/imageshop
 ```
 
 - In the Control Panel, go to Settings → Plugins and click the “Install” button for 'Imageshop'.

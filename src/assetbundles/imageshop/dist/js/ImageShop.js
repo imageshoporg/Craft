@@ -3,9 +3,9 @@
  *
  * ImageShopField Field JS
  *
- * @author    WebDNA
- * @copyright Copyright (c) 2022 WebDNA
- * @link      https://webdna.co.uk
+ * @author    Imageshop
+ * @copyright Copyright (c) 2022 Imageshop
+ * @link      https://www.imageshop.org
  * @package   Imageshop
  * @since     2.0.0
  */

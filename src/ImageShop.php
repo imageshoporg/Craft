@@ -4,11 +4,11 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop;
+namespace Imageshop\Imageshop;
 
 use Craft;
 use craft\base\Model;
@@ -16,16 +16,16 @@ use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
 use craft\services\Fields;
 use craft\services\Utilities;
-use webdna\imageshop\fields\ImageShopField;
-use webdna\imageshop\models\Settings;
-use webdna\imageshop\services\ImageShop as Service;
-use webdna\imageshop\utilities\ImageShop as UtilitiesImageShop;
+use Imageshop\Imageshop\fields\ImageShopField;
+use Imageshop\Imageshop\models\Settings;
+use Imageshop\Imageshop\services\ImageShop as Service;
+use Imageshop\Imageshop\utilities\ImageShop as UtilitiesImageShop;
 use yii\base\Event;
 
 /**
  * Class ImageShop
  *
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  *
@@ -97,7 +97,7 @@ class ImageShop extends Plugin
 
     }
 
-    public function getOpenGraphImageForElement($element): ?\webdna\imageshop\models\ImageShop
+    public function getOpenGraphImageForElement($element): ?\Imageshop\Imageshop\models\ImageShop
     {
         if(!$element){
             return null;
@@ -133,7 +133,7 @@ class ImageShop extends Plugin
         }
 
         // if proper field
-        if(get_class($field) !== \webdna\imageshop\fields\ImageShopField::class){
+        if(get_class($field) !== \Imageshop\Imageshop\fields\ImageShopField::class){
             return null;
         }
 
@@ -145,7 +145,7 @@ class ImageShop extends Plugin
 
         // if proper value
         $imageObj = array_values($value)[0];
-        if(get_class($imageObj) !== \webdna\imageshop\models\ImageShop::class){
+        if(get_class($imageObj) !== \Imageshop\Imageshop\models\ImageShop::class){
             return null;
         }
 
@@ -233,7 +233,7 @@ class ImageShop extends Plugin
         }
     }
 
-    public function getGlobalOgImage(): ?\webdna\imageshop\models\ImageShop
+    public function getGlobalOgImage(): ?\Imageshop\Imageshop\models\ImageShop
     {
         $globalId = $this->getSettings()->openGraphGlobalId;
         if(!is_int($globalId)){

@@ -4,12 +4,12 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */

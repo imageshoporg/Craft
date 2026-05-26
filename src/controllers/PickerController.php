@@ -1,10 +1,10 @@
 <?php
 
-namespace webdna\imageshop\controllers;
+namespace Imageshop\Imageshop\controllers;
 
 use Craft;
 use craft\web\Controller;
-use webdna\imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop;
 
 class PickerController extends Controller
 {

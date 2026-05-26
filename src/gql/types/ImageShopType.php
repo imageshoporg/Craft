@@ -1,6 +1,6 @@
 <?php
 
-namespace webdna\imageshop\gql\types;
+namespace Imageshop\Imageshop\gql\types;
 
 use craft\gql\GqlEntityRegistry;
 use GraphQL\Type\Definition\ObjectType;

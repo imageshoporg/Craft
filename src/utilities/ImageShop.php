@@ -1,10 +1,10 @@
 <?php
 
-namespace webdna\imageshop\utilities;
+namespace Imageshop\Imageshop\utilities;
 
 use Craft;
 use craft\base\Utility;
-use webdna\imageshop\ImageShop as Plugin;
+use Imageshop\Imageshop\ImageShop as Plugin;
 
 /**
  * Sync utility

@@ -4,19 +4,19 @@
  *
  * Imageshop Integration for CraftCMS
  *
- * @link      https://webdna.co.uk
- * @copyright Copyright (c) 2022 WebDNA
+ * @link      https://www.imageshop.org
+ * @copyright Copyright (c) 2022 Imageshop
  */
 
-namespace webdna\imageshop\models;
+namespace Imageshop\Imageshop\models;
 
-use webdna\imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop;
 
 use Craft;
 use craft\base\Model;
 
 /**
- * @author    WebDNA
+ * @author    Imageshop
  * @package   Imageshop
  * @since     2.0.0
  */
@@ -56,7 +56,7 @@ class Settings extends Model
     {
         $fields = \Craft::$app->fields->getAllFields();
         $fields = array_filter($fields, function($field){
-            return get_class($field) == \webdna\imageshop\fields\ImageShopField::class;
+            return get_class($field) == \Imageshop\Imageshop\fields\ImageShopField::class;
         });
 
         $options = [

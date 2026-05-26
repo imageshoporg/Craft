@@ -1,10 +1,10 @@
 <?php
 
-namespace webdna\imageshop\migrations;
+namespace Imageshop\Imageshop\migrations;
 
 use Craft;
 use craft\db\Migration;
-use webdna\imageshop\fields\ImageShopField;
+use Imageshop\Imageshop\fields\ImageShopField;
 
 /**
  * m260324_000000_change_field_columns_to_mediumtext migration.

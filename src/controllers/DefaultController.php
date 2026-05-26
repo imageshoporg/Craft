@@ -1,12 +1,12 @@
 <?php
 
-namespace webdna\imageshop\controllers;
+namespace Imageshop\Imageshop\controllers;
 
 use craft\web\Controller;
 use yii\web\Response;
 
 use Craft;
-use webdna\imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop;
 
 class DefaultController extends Controller
 {

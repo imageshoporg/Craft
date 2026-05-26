@@ -1,11 +1,11 @@
 <?php
 
-namespace webdna\imageshop\jobs;
+namespace Imageshop\Imageshop\jobs;
 
 use Craft;
 use craft\queue\BaseJob;
 use craft\helpers\Json;
-use webdna\imageshop\ImageShop;
+use Imageshop\Imageshop\ImageShop;
 
 /**
  * Syncs the details of documents from the recently updated cache to all the
