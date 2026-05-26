@@ -43,6 +43,41 @@ php craft plugin/install imageshop-dam
 
 No migrations are required. After updating, you'll see a new **Site language mappings** section on the plugin's settings page — all inputs start empty, so existing installs retain the previous auto-derived language behavior unchanged. See [Per-site language mapping](#per-site-language-mapping) for how to opt in.
 
+## Upgrading from `webdna/imageshop-dam`
+
+This repository now uses `imageshop/imageshop` as the Composer package name and `Imageshop\Imageshop\...` as the PHP namespace.
+
+In your Craft project (not in this plugin repository), run:
+
+1. Update Composer dependencies.
+
+```bash
+composer update
+```
+
+2. Update field type references in project config (or DB equivalent):
+
+```yaml
+type: webdna\imageshop\fields\ImageShopField
+```
+
+to:
+
+```yaml
+type: Imageshop\Imageshop\fields\ImageShopField
+```
+
+3. Apply project config and pending updates.
+
+```bash
+php craft up
+```
+
+Notes:
+- `handle` remains `imageshop-dam`.
+- No data migration is required for this namespace/vendor rename alone.
+- No field content loss is expected from this change by itself.
+
 ## Upgrading to 2.5.0
 
 After updating the plugin via Composer, run migrations to upgrade field content columns from `TEXT` to `MEDIUMTEXT`:
