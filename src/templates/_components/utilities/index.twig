@@ -1,38 +1,38 @@
 <form class="" method="post" accept-charset="UTF-8">
 
-    {{ actionInput('imageshop-da/default/create-sync-jobs') }}
+    {{ actionInput('imageshop-plugin/default/create-sync-jobs') }}
     {{ csrfInput() }}
-    {{ redirectInput('utilities/imageshop-da') }}
+    {{ redirectInput('utilities/imageshop-plugin') }}
 
     <div>
-        {{ 'This will fetch the latest metadata from the Imageshop API and update all Imageshop fields in Craft, including alternative text, descriptions, credits, and tags.'|t('imageshop-da') }}
+        {{ 'This will fetch the latest metadata from the Imageshop API and update all Imageshop fields in Craft, including alternative text, descriptions, credits, and tags.'|t('imageshop-plugin') }}
         <br>
         <strong>
-            {{ 'Important: This action cannot be undone. Manual edits to metadata will be overwritten.'|t('imageshop-da') }}
+            {{ 'Important: This action cannot be undone. Manual edits to metadata will be overwritten.'|t('imageshop-plugin') }}
         </strong>
     </div>
 
     <br>
 
     <div class="">
-        <button type="submit" class="btn submit">{{ 'Sync metadata'|t('imageshop-da') }}</button>
+        <button type="submit" class="btn submit">{{ 'Sync metadata'|t('imageshop-plugin') }}</button>
     </div>
 </form>
 
 <hr>
 
-<h2>{{ 'Sync history'|t('imageshop-da') }}</h2>
+<h2>{{ 'Sync history'|t('imageshop-plugin') }}</h2>
 
 {% if syncLog is empty %}
-    <p class="zilch">{{ 'No syncs have been run yet.'|t('imageshop-da') }}</p>
+    <p class="zilch">{{ 'No syncs have been run yet.'|t('imageshop-plugin') }}</p>
 {% else %}
     <table class="data fullwidth">
         <thead>
             <tr>
-                <th>{{ 'Date'|t('imageshop-da') }}</th>
-                <th>{{ 'Documents changed'|t('imageshop-da') }}</th>
-                <th>{{ 'Jobs queued'|t('imageshop-da') }}</th>
-                <th>{{ 'Status'|t('imageshop-da') }}</th>
+                <th>{{ 'Date'|t('imageshop-plugin') }}</th>
+                <th>{{ 'Documents changed'|t('imageshop-plugin') }}</th>
+                <th>{{ 'Jobs queued'|t('imageshop-plugin') }}</th>
+                <th>{{ 'Status'|t('imageshop-plugin') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -49,9 +49,9 @@
                     <td>{{ entry.jobsQueued }}</td>
                     <td>
                         {% if entry.status == 'success' %}
-                            <span class="status green"></span> {{ 'Success'|t('imageshop-da') }}
+                            <span class="status green"></span> {{ 'Success'|t('imageshop-plugin') }}
                         {% else %}
-                            <span class="status light"></span> {{ 'No changes'|t('imageshop-da') }}
+                            <span class="status light"></span> {{ 'No changes'|t('imageshop-plugin') }}
                         {% endif %}
                     </td>
                 </tr>
@@ -62,7 +62,7 @@
                                 {% for doc in entry.details %}
                                     <li style="padding: 2px 0; color: #8f98a3;">
                                         {% if loop.last %}&#x2514;{% else %}&#x251c;{% endif %}
-                                        {{ 'Document'|t('imageshop-da') }} {{ doc.documentId }} &mdash; {{ doc.name }}
+                                        {{ 'Document'|t('imageshop-plugin') }} {{ doc.documentId }} &mdash; {{ doc.name }}
                                     </li>
                                 {% endfor %}
                             </ul>

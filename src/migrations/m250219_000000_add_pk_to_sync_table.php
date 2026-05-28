@@ -19,7 +19,7 @@ class m250219_000000_add_pk_to_sync_table extends Migration
      */
     public function safeUp(): bool
     {
-        $tableName = '{{%imageshop-da_sync}}';
+        $tableName = '{{%imageshop-plugin_sync}}';
 
         if (!$this->db->getTableSchema($tableName)) {
             // Table doesn't exist yet; Install migration will create it correctly
@@ -76,7 +76,7 @@ class m250219_000000_add_pk_to_sync_table extends Migration
      */
     public function safeDown(): bool
     {
-        $tableName = '{{%imageshop-da_sync}}';
+        $tableName = '{{%imageshop-plugin_sync}}';
 
         if (!$this->db->getTableSchema($tableName)) {
             return true;

@@ -60,7 +60,7 @@ class Settings extends Model
         $options = [
             [
                 'value' => null,
-                'label' => Craft::t('imageshop-da', 'Select'),
+                'label' => Craft::t('imageshop-plugin', 'Select'),
             ]
         ];
 
@@ -80,7 +80,7 @@ class Settings extends Model
         $options = [
             [
                 'value' => null,
-                'label' => Craft::t('imageshop-da', 'Select'),
+                'label' => Craft::t('imageshop-plugin', 'Select'),
             ]
         ];
 

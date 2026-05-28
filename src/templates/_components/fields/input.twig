@@ -22,13 +22,13 @@
         <div class="imageshop-preview element removable large hasthum" data-imageshop-list>
             {% if value ?? false %}
                 {% if value is array %}
-                    {% include 'imageshop-da/_components/fields/input-list.twig' with {
+                    {% include 'imageshop-plugin/_components/fields/input-list.twig' with {
                         images: value,
                         language: field.getCurrentAdminLanguage(),
                     } %}
                 {% else %}
                     {% if value.image %}
-                        {% include 'imageshop-da/_components/fields/input-list.twig' with {
+                        {% include 'imageshop-plugin/_components/fields/input-list.twig' with {
                             images: [value.image],
                             language: field.getCurrentAdminLanguage(),
                         } %}
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <button type="button" class="imageshop-trigger add icon dashed btn">{{ 'buttonText'|t('imageshop-da') }}</button>
+    <button type="button" class="imageshop-trigger add icon dashed btn">{{ 'buttonText'|t('imageshop-plugin') }}</button>
     {{ forms.hidden({
         id: id ~ namespace,
         name: name,

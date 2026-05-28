@@ -16,8 +16,8 @@
 {% import "_includes/forms" as forms %}
 
 {{ forms.autosuggestField({
-    label: 'Token'|t('imageshop-da'),
-    instructions: 'Imageshop token'|t('imageshop-da'),
+    label: 'Token'|t('imageshop-plugin'),
+    instructions: 'Imageshop token'|t('imageshop-plugin'),
     id: 'token',
     name: 'token',
     suggestEnvVars: true,
@@ -26,8 +26,8 @@
 }}
 
 {{ forms.autosuggestField({
-    label: 'Key'|t('imageshop-da'),
-    instructions: 'Imageshop private key'|t('imageshop-da'),
+    label: 'Key'|t('imageshop-plugin'),
+    instructions: 'Imageshop private key'|t('imageshop-plugin'),
     id: 'key',
     name: 'key',
     suggestEnvVars: true,
@@ -37,16 +37,16 @@
 
 {% set languages = [
   {
-    label: 'Norwegian'|t('imageshop-da'),
+    label: 'Norwegian'|t('imageshop-plugin'),
     value: 'nb-NO'
   }, {
-    label: 'English'|t('imageshop-da'),
+    label: 'English'|t('imageshop-plugin'),
     value: 'en-US'
   }
 ] %}
 
 {{ forms.selectField({
-    label: 'Language'|t('imageshop-da'),
+    label: 'Language'|t('imageshop-plugin'),
     id: 'language',
     name: 'language',
     options: languages,
@@ -54,8 +54,8 @@
 }}
 
 <hr>
-<h2>{{ 'Site language mappings'|t('imageshop-da') }}</h2>
-<p class="light">{{ 'Override which Imageshop language code to use for each Craft site. Leave empty to auto-derive from the site’s Craft language.'|t('imageshop-da') }}</p>
+<h2>{{ 'Site language mappings'|t('imageshop-plugin') }}</h2>
+<p class="light">{{ 'Override which Imageshop language code to use for each Craft site. Leave empty to auto-derive from the site’s Craft language.'|t('imageshop-plugin') }}</p>
 
 {% for site in sites %}
     {{ forms.textField({
@@ -64,15 +64,15 @@
         name: 'siteLanguages[' ~ site.handle ~ ']',
         value: settings.siteLanguages[site.handle] ?? '',
         placeholder: site.derived,
-        instructions: ('Imageshop language code (e.g. no, nn, en, sv). Auto-derived: ' ~ site.derived)|t('imageshop-da'),
+        instructions: ('Imageshop language code (e.g. no, nn, en, sv). Auto-derived: ' ~ site.derived)|t('imageshop-plugin'),
     }) }}
 {% endfor %}
 
 <hr>
 
 {{ forms.selectField({
-    label: 'Imageshop field used to generate opengraph image'|t('imageshop-da'),
-    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.'|t('imageshop-da'),
+    label: 'Imageshop field used to generate opengraph image'|t('imageshop-plugin'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. The field must be assigned to the element (such as an entry) for which you want to generate the OpenGraph image using Imageshop. The first image from the field will be used.'|t('imageshop-plugin'),
     id: 'openGraphFieldId',
     name: 'openGraphFieldId',
     options: settings.getOpengraphFieldOptions(),
@@ -80,8 +80,8 @@
 }}
 
 {{ forms.selectField({
-    label: 'Global set which will be used as source for the default opengraph image.'|t('imageshop-da'),
-    instructions: 'This will work only if the SEOmatic plugin is installed. This global must have imageshop field assigned and will be used only if current element does not have its own specific opengraph defined by its Imageshop field.'|t('imageshop-da'),
+    label: 'Global set which will be used as source for the default opengraph image.'|t('imageshop-plugin'),
+    instructions: 'This will work only if the SEOmatic plugin is installed. This global must have imageshop field assigned and will be used only if current element does not have its own specific opengraph defined by its Imageshop field.'|t('imageshop-plugin'),
     id: 'openGraphGlobalId',
     name: 'openGraphGlobalId',
     options: settings.getOpengraphGlobalOptions(),

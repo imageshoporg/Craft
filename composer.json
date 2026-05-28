@@ -30,7 +30,7 @@
     },
     "extra": {
         "name": "Imageshop DAM",
-        "handle": "imageshop-da",
+        "handle": "imageshop-plugin",
         "developer": "Imageshop",
         "developerUrl": "https://www.imageshop.org",
         "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/main/CHANGELOG.md",

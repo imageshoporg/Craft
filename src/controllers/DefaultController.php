@@ -13,7 +13,7 @@ class DefaultController extends Controller
     public function actionCreateSyncJobs(): ?Response
     {
         $this->requirePostRequest();
-        $this->requirePermission('utility:imageshop-da');
+        $this->requirePermission('utility:imageshop-plugin');
 
         $service = ImageShop::getInstance()->service;
 
@@ -38,13 +38,13 @@ class DefaultController extends Controller
 
         if ($jobCount > 0) {
             Craft::$app->getSession()->setNotice(
-                Craft::t('imageshop-da', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
+                Craft::t('imageshop-plugin', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
                     'count' => $jobCount,
                 ])
             );
         } else {
             Craft::$app->getSession()->setNotice(
-                Craft::t('imageshop-da', 'No changes found. All metadata is up to date.')
+                Craft::t('imageshop-plugin', 'No changes found. All metadata is up to date.')
             );
         }
 
