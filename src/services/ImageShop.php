@@ -492,7 +492,7 @@ class ImageShop extends Component
         try {
             Craft::$app->getDb()
                 ->createCommand()
-                ->insert('{{%imageshop-dam_sync_log}}', [
+                ->insert('{{%imageshop-da_sync_log}}', [
                     'dateCreated' => Db::prepareDateForDb(new \DateTime()),
                     'documentsChanged' => $documentsChanged,
                     'jobsQueued' => $jobsQueued,
@@ -504,7 +504,7 @@ class ImageShop extends Component
             // Prune old entries, keeping the most recent 20
             $cutoffId = (new Query())
                 ->select('id')
-                ->from('{{%imageshop-dam_sync_log}}')
+                ->from('{{%imageshop-da_sync_log}}')
                 ->orderBy(['id' => SORT_DESC])
                 ->offset(20)
                 ->limit(1)
@@ -513,11 +513,11 @@ class ImageShop extends Component
             if ($cutoffId) {
                 Craft::$app->getDb()
                     ->createCommand()
-                    ->delete('{{%imageshop-dam_sync_log}}', ['<=', 'id', $cutoffId])
+                    ->delete('{{%imageshop-da_sync_log}}', ['<=', 'id', $cutoffId])
                     ->execute();
             }
         } catch (\yii\db\Exception $e) {
-            Craft::warning('Could not write to sync log table: ' . $e->getMessage(), 'imageshop-dam');
+            Craft::warning('Could not write to sync log table: ' . $e->getMessage(), 'imageshop-da');
         }
     }
 
@@ -532,7 +532,7 @@ class ImageShop extends Component
         try {
             $rows = (new Query())
                 ->select(['dateCreated', 'documentsChanged', 'jobsQueued', 'status', 'details'])
-                ->from('{{%imageshop-dam_sync_log}}')
+                ->from('{{%imageshop-da_sync_log}}')
                 ->orderBy(['dateCreated' => SORT_DESC])
                 ->limit($limit)
                 ->all();
@@ -603,7 +603,7 @@ class ImageShop extends Component
     {
         $query = (new Query())
             ->select('documentCache')
-            ->from('{{%imageshop-dam_sync}}')
+            ->from('{{%imageshop-da_sync}}')
             ->orderBy(['lastUpdated' => SORT_DESC])
             ->one();
 
@@ -627,7 +627,7 @@ class ImageShop extends Component
         $lastUpdate = Db::prepareDateForDb(new \DateTime());
         Craft::$app->getDb()
             ->createCommand()
-            ->upsert('{{%imageshop-dam_sync}}', [
+            ->upsert('{{%imageshop-da_sync}}', [
                 'id' => 1,
                 'lastUpdated' => $lastUpdate,
                 'documentCache' => Json::encode($documentCache)
@@ -649,7 +649,7 @@ class ImageShop extends Component
     {
         $query = (new Query())
             ->select('lastUpdated')
-            ->from('{{%imageshop-dam_sync}}')
+            ->from('{{%imageshop-da_sync}}')
             ->orderBy(['lastUpdated' => SORT_DESC])
             ->one();
 
