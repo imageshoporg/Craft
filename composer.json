@@ -1,5 +1,5 @@
 {
-    "name": "imageshop/imageshop-dam",
+    "name": "imageshop/imageshop-plugin",
     "description": "Imageshop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
