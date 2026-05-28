@@ -78,7 +78,7 @@ class ImageShop extends Plugin
 
         Craft::info(
             Craft::t(
-                'imageshop-da',
+                'imageshop-plugin',
                 '{name} plugin loaded',
                 ['name' => $this->name]
             ),
@@ -271,7 +271,7 @@ class ImageShop extends Plugin
         }
 
         return Craft::$app->view->renderTemplate(
-            'imageshop-da/settings',
+            'imageshop-plugin/settings',
             [
                 'settings' => $this->getSettings(),
                 'sites' => $sites,

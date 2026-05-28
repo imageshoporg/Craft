@@ -8,7 +8,7 @@ class m260303_000000_add_sync_log_table extends Migration
 {
     public function safeUp(): bool
     {
-        $this->createTable('{{%imageshop-da_sync_log}}', [
+        $this->createTable('{{%imageshop-plugin_sync_log}}', [
             'id' => $this->primaryKey(),
             'dateCreated' => $this->dateTime()->notNull(),
             'documentsChanged' => $this->integer()->notNull()->defaultValue(0),
@@ -21,7 +21,7 @@ class m260303_000000_add_sync_log_table extends Migration
 
     public function safeDown(): bool
     {
-        $this->dropTableIfExists('{{%imageshop-da_sync_log}}');
+        $this->dropTableIfExists('{{%imageshop-plugin_sync_log}}');
 
         return true;
     }

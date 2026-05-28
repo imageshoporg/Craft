@@ -30,7 +30,7 @@ class PickerController extends Controller
 
         if (!$url) {
             return $this->asJson([
-                'error' => Craft::t('imageshop-da', 'Could not obtain ImageShop access token. Check plugin settings and try again.'),
+                'error' => Craft::t('imageshop-plugin', 'Could not obtain ImageShop access token. Check plugin settings and try again.'),
             ])->setStatusCode(400);
         }
 
