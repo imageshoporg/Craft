@@ -15,13 +15,13 @@ class Install extends Migration
      */
     public function safeUp(): bool
     {
-        $this->createTable('{{%imageshop-plugin_sync}}', [
+        $this->createTable('{{%imageshop-dam_sync}}', [
             'id' => $this->primaryKey(),
             'lastUpdated' => $this->dateTime(),
             'documentCache' => $this->longText()
         ]);
 
-        $this->createTable('{{%imageshop-plugin_sync_log}}', [
+        $this->createTable('{{%imageshop-dam_sync_log}}', [
             'id' => $this->primaryKey(),
             'dateCreated' => $this->dateTime()->notNull(),
             'documentsChanged' => $this->integer()->notNull()->defaultValue(0),
@@ -38,8 +38,8 @@ class Install extends Migration
      */
     public function safeDown(): bool
     {
-        $this->dropTableIfExists('{{%imageshop-plugin_sync_log}}');
-        $this->dropTableIfExists('{{%imageshop-plugin_sync}}');
+        $this->dropTableIfExists('{{%imageshop-dam_sync_log}}');
+        $this->dropTableIfExists('{{%imageshop-dam_sync}}');
 
         return true;
     }

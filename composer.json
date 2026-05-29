@@ -1,5 +1,5 @@
 {
-    "name": "imageshop/imageshop-plugin",
+    "name": "imageshop/imageshop-dam",
     "description": "Imageshop DAM Integration for CraftCMS",
     "type": "craft-plugin",
     "keywords": [
@@ -30,7 +30,7 @@
     },
     "extra": {
         "name": "Imageshop DAM",
-        "handle": "imageshop-plugin",
+        "handle": "imageshop-dam",
         "developer": "Imageshop",
         "developerUrl": "https://www.imageshop.org",
         "changelogUrl": "https://raw.githubusercontent.com/imageshoporg/Craft/main/CHANGELOG.md",

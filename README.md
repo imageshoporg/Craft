@@ -24,7 +24,7 @@ cd /path/to/project
 - Then tell Composer to load the plugin:
 
 ```
-composer require imageshop/imageshop-plugin
+composer require imageshop/imageshop-dam
 ```
 
 - In the Control Panel, go to Settings → Plugins and click the “Install” button for 'Imageshop'.
@@ -32,7 +32,7 @@ composer require imageshop/imageshop-plugin
 OR do it via the command line
 
 ```
-php craft plugin/install imageshop-plugin
+php craft plugin/install imageshop-dam
 ```
 
 - On the settings page, fill out the token and private key field to start using the plugin.
@@ -45,7 +45,7 @@ No migrations are required. After updating, you'll see a new **Site language map
 
 ## Upgrading from `webdna/imageshop-dam`
 
-This repository now uses `imageshop/imageshop-plugin` as the Composer package name and `Imageshop\Imageshop\...` as the PHP namespace.
+This repository now uses `imageshop/imageshop-dam` as the Composer package name and `Imageshop\Imageshop\...` as the PHP namespace.
 
 In your Craft project (not in this plugin repository), run:
 
@@ -74,7 +74,7 @@ php craft up
 ```
 
 Notes:
-- `handle` remains `imageshop-plugin`.
+- `handle` remains `imageshop-dam`.
 - No data migration is required for this namespace/vendor rename alone.
 - No field content loss is expected from this change by itself.
 
@@ -83,7 +83,7 @@ Notes:
 After updating the plugin via Composer, run migrations to upgrade field content columns from `TEXT` to `MEDIUMTEXT`:
 
 ```bash
-php craft migrate --plugin=imageshop-plugin
+php craft migrate --plugin=imageshop-dam
 ```
 
 Or, if all pending migrations should be applied at once:
@@ -478,7 +478,7 @@ Imageshop fields store images at the resolution configured in the field settings
 ### Endpoint
 
 ```
-GET /actions/imageshop-plugin/permalink/get-hq-url
+GET /actions/imageshop-dam/permalink/get-hq-url
 ```
 
 | Parameter | Type | Required | Default | Description |
@@ -535,7 +535,7 @@ document.querySelectorAll('.gallery figure').forEach(function(fig) {
 
         // Fetch and swap in HQ version
         if (img.documentId && !hqCache[img.documentId]) {
-            fetch('/actions/imageshop-plugin/permalink/get-hq-url?documentId=' + img.documentId)
+            fetch('/actions/imageshop-dam/permalink/get-hq-url?documentId=' + img.documentId)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.url) {

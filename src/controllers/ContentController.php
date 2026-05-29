@@ -67,7 +67,7 @@ class ContentController extends Controller
         }, array_filter($json, fn($image) => !empty($image)));
 
         $view = Craft::$app->getView();
-        $html = $view->renderTemplate('imageshop-plugin/_components/fields/input-list.twig', [
+        $html = $view->renderTemplate('imageshop-dam/_components/fields/input-list.twig', [
             'images' => $images,
             'language' => $language,
         ], \craft\web\View::TEMPLATE_MODE_CP);

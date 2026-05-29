@@ -236,7 +236,7 @@
                 var popupSettings = 'height=' + height + ',width=' + width + ',top=' + topPosition + ',left=' + leftPosition + ',resizable';
 
                 $.ajax({
-                    url: Craft.getActionUrl('imageshop-plugin/picker/get-url'),
+                    url: Craft.getActionUrl('imageshop-dam/picker/get-url'),
                     method: "POST",
                     data: self.$pickerOptions,
                     dataType: "json",
@@ -246,7 +246,7 @@
                     },
                     success: function (resp) {
                         if (!resp || !resp.url) {
-                            var msg = (resp && resp.error) ? resp.error : Craft.t('imageshop-plugin', 'Could not open ImageShop picker.');
+                            var msg = (resp && resp.error) ? resp.error : Craft.t('imageshop-dam', 'Could not open ImageShop picker.');
                             Craft.cp.displayError(msg);
                             return;
                         }
@@ -256,7 +256,7 @@
                     error: function (xhr) {
                         var msg = (xhr.responseJSON && xhr.responseJSON.error)
                             ? xhr.responseJSON.error
-                            : Craft.t('imageshop-plugin', 'Could not open ImageShop picker.');
+                            : Craft.t('imageshop-dam', 'Could not open ImageShop picker.');
                         Craft.cp.displayError(msg);
                     }
                 });
@@ -296,7 +296,7 @@
                 };
 
                 $.ajax({
-                    url: Craft.getActionUrl('imageshop-plugin/content/refresh-metadata'),
+                    url: Craft.getActionUrl('imageshop-dam/content/refresh-metadata'),
                     method: "POST",
                     data: {
                         documentIds: newDocIds,
@@ -348,7 +348,7 @@
                 }
 
                 // update list
-                var controllerUrl = Craft.getActionUrl('imageshop-plugin/content/get-image-list');
+                var controllerUrl = Craft.getActionUrl('imageshop-dam/content/get-image-list');
                 var listElement = this.$listElement;
                 var object = this;
                 var language = this.$container.attr('data-current-language');

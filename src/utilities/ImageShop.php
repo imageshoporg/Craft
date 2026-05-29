@@ -13,12 +13,12 @@ class ImageShop extends Utility
 {
     public static function displayName(): string
     {
-        return Craft::t('imageshop-plugin', 'Imageshop');
+        return Craft::t('imageshop-dam', 'Imageshop');
     }
 
     public static function id(): string
     {
-        return 'imageshop-plugin';
+        return 'imageshop-dam';
     }
 
     public static function iconPath(): ?string
@@ -29,7 +29,7 @@ class ImageShop extends Utility
     public static function contentHtml(): string
     {
         return Craft::$app->getView()->renderTemplate(
-            'imageshop-plugin/_components/utilities/index.twig',
+            'imageshop-dam/_components/utilities/index.twig',
             [
                 'syncLog' => Plugin::getInstance()->service->getSyncLog(),
             ]

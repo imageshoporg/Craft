@@ -1,8 +1,8 @@
 {% for image in images %}
     <div class="imageshop-img-container" data-imageshop-image-wrapper>
-        <a class="move icon imageshop-img-container__reorder imageshop-img-container-icon" title="{{ 'Reorder'|t('imageshop-plugin') }}" aria-label="{{ 'Reorder'|t('imageshop-plugin') }}" role="button">&nbsp;</a>
-        <span data-imageshop-trigger-settings data-icon="settings" class="imageshop-img-container__settings imageshop-img-container-icon" title="{{ 'Show settings'|t('imageshop-plugin') }}"></span>
-        <a class="delete icon imageshop-remove imageshop-img-container__remove imageshop-img-container-icon" title="{{ 'Remove image'|t('imageshop-plugin') }}" data-img-code="{{ image.code }}"></a>
+        <a class="move icon imageshop-img-container__reorder imageshop-img-container-icon" title="{{ 'Reorder'|t('imageshop-dam') }}" aria-label="{{ 'Reorder'|t('imageshop-dam') }}" role="button">&nbsp;</a>
+        <span data-imageshop-trigger-settings data-icon="settings" class="imageshop-img-container__settings imageshop-img-container-icon" title="{{ 'Show settings'|t('imageshop-dam') }}"></span>
+        <a class="delete icon imageshop-remove imageshop-img-container__remove imageshop-img-container-icon" title="{{ 'Remove image'|t('imageshop-dam') }}" data-img-code="{{ image.code }}"></a>
         <div class="imageshop-img-container__wrapper">
             <img src="{{ image.getResizedUrl(400) }}" width="100">
         </div>
@@ -17,14 +17,14 @@
 
         <div class="imageshop-img-container__alt">
             <div class="imageshop-img-container__alt-top">
-                <label for="alt-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Alternative text'|t('imageshop-plugin') }} - {{ language }}:</label>
+                <label for="alt-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Alternative text'|t('imageshop-dam') }} - {{ language }}:</label>
             </div>
             <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="6" data-alt-text>{{ image.getAltText(language) }}</textarea>
         </div>
 
         <div class="imageshop-img-container__alt">
             <div class="imageshop-img-container__alt-top">
-                <label for="description-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Description'|t('imageshop-plugin') }} - {{ language }}:</label>
+                <label for="description-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Description'|t('imageshop-dam') }} - {{ language }}:</label>
             </div>
             <textarea name="description-{{ image.code }}" class="text fullwidth" rows="6" data-description-text>{{ image.getDescription(language) }}</textarea>
         </div>

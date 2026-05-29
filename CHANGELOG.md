@@ -25,7 +25,7 @@ Updating packagist setup and release for main to support craft 4 and craft 5.
 
 ## 2.5.1 - 2026-04-16
 ### Security
-- The persistent Imageshop API token is no longer exposed in the picker popup URL. Previously `IMAGESHOPTOKEN` was rendered server-side into the entry edit page, leaking the long-lived token to browser history, devtools, referer headers and proxy logs. The field now requests a fresh short-lived token from a new CSRF-protected CP action (`imageshop-plugin/picker/get-url`) just before the popup opens, so the long-lived token never leaves the server. Requires no configuration changes.
+- The persistent Imageshop API token is no longer exposed in the picker popup URL. Previously `IMAGESHOPTOKEN` was rendered server-side into the entry edit page, leaking the long-lived token to browser history, devtools, referer headers and proxy logs. The field now requests a fresh short-lived token from a new CSRF-protected CP action (`imageshop-dam/picker/get-url`) just before the popup opens, so the long-lived token never leaves the server. Requires no configuration changes.
 
 ### Added
 - `PickerController::actionGetUrl` CP action that mints a picker URL with a short-lived token. Requires `accessCp` permission and a valid CSRF token.
@@ -62,12 +62,12 @@ Updating packagist setup and release for main to support craft 4 and craft 5.
 - `altText` and `tags` fields in GraphQL type.
 - Explicit GraphQL resolvers for all language-dependent text fields (`credits`, `description`, `title`, `altText`, `rights`, `tags`), ensuring correct per-site language resolution.
 - Documentation for focal point usage in Twig templates and GraphQL.
-- High-quality image permalink endpoint (`/actions/imageshop-plugin/permalink/get-hq-url`) for fetching larger resolution images on-demand via the Imageshop Permalink API. Useful for lightbox/modal popups.
+- High-quality image permalink endpoint (`/actions/imageshop-dam/permalink/get-hq-url`) for fetching larger resolution images on-demand via the Imageshop Permalink API. Useful for lightbox/modal popups.
 - `getPermalink()` service method for generating permanent CDN URLs at any resolution.
 - Documentation for the permalink endpoint and gallery lightbox usage pattern.
 - Full Norwegian (Bokmål) translations for all plugin UI: settings page, field settings, field input labels, utility page, and queue job descriptions.
-- Added `|t('imageshop-plugin')` translation filters to all plugin templates (settings, field settings, field input) to enable localization.
-- Sync log table (`imageshop-plugin_sync_log`) records each sync run with documents changed, jobs queued, and status.
+- Added `|t('imageshop-dam')` translation filters to all plugin templates (settings, field settings, field input) to enable localization.
+- Sync log table (`imageshop-dam_sync_log`) records each sync run with documents changed, jobs queued, and status.
 - Sync history displayed on the Utilities → Imageshop page.
 
 ### Fixed

@@ -19,6 +19,6 @@ class UpdateCache extends BaseJob
 
     protected function defaultDescription(): ?string
     {
-        return Craft::t('imageshop-plugin', 'Getting recently changed Imageshop DAM documents');
+        return Craft::t('imageshop-dam', 'Getting recently changed Imageshop DAM documents');
     }
 }

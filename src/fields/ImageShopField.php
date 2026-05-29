@@ -52,7 +52,7 @@ class ImageShopField extends Field
 
     public static function displayName(): string
     {
-        return Craft::t('imageshop-plugin', 'Imageshop DAM');
+        return Craft::t('imageshop-dam', 'Imageshop DAM');
     }
 
     // Public Methods
@@ -159,7 +159,7 @@ class ImageShopField extends Field
     {
         // Render the settings template
         return Craft::$app->getView()->renderTemplate(
-            'imageshop-plugin/_components/fields/settings',
+            'imageshop-dam/_components/fields/settings',
             [
                 'field' => $this,
             ]
@@ -208,7 +208,7 @@ class ImageShopField extends Field
 
         // Render the input template
         return Craft::$app->getView()->renderTemplate(
-            'imageshop-plugin/_components/fields/input',
+            'imageshop-dam/_components/fields/input',
             [
                 'name' => $this->handle,
                 'value' => $value,
