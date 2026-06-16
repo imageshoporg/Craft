@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## 3.1.3 - 2026-06-16
+### Fixed
+- Installation instructions now work end-to-end. The Composer package name, the Craft plugin handle, and the README all consistently reference `imageshop-dam`. Previously, 3.1.1 changed the plugin's handle to `imageshop-plugin` and 3.1.2 also renamed the Composer `name` field, but the package remained published on Packagist as `imageshop/imageshop-dam` — leaving three mismatching identifiers and breaking both `composer require imageshop/imageshop-plugin` (404 on Packagist) and `php craft plugin/install imageshop-dam` (handle not found). Fixes [#6](https://github.com/imageshoporg/Craft/issues/6).
+
+## 3.1.2 - 2026-05-28
+### Changed
+- Renamed the plugin's `composer.json` `name` field to `imageshop/imageshop-plugin`. Packagist continued to publish the package as `imageshop/imageshop-dam`, so this rename was effectively invisible to installers — and contributed to the installation mismatch reported in [#6](https://github.com/imageshoporg/Craft/issues/6). Reverted in 3.1.3.
+
+## 3.1.1 - 2026-05-28
+### Changed
+- Changed the Craft plugin handle from `imageshop-dam` to `imageshop-plugin` (also fixing the unreleased `imageshop-da` typo from 3.1.0 prep). This caused the Craft Plugin Store's "Install" button — which calls `php craft plugin/install imageshop-dam` — to fail with "No plugin exists with the handle `imageshop-dam`". Reverted in 3.1.3.
+
+## 3.1.0 - 2026-05-26
+### Changed
+- Rebranded from `webdna/imageshop-dam` to `imageshop/imageshop-dam`. PHP namespace changed to `Imageshop\Imageshop\…`; display name changed to "Imageshop DAM". Plugin handle remained `imageshop-dam`.
+
 ## 3.0.0 - 2026-05-21
 ### Added
 Updating packagist setup and release for main to support craft 4 and craft 5.
