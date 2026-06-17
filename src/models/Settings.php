@@ -45,7 +45,7 @@ class Settings extends Model
     {
         return [
             [['token', 'key', 'language'], 'string'],
-            [['token', 'key', 'language'], 'required'],
+            [['token', 'language'], 'required'],
             [['siteLanguages'], 'safe'],
         ];
     }

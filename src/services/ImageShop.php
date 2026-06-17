@@ -44,15 +44,16 @@ class ImageShop extends Component
     {
         $settings = Plugin::$plugin->getSettings();
 
-        if (empty($settings->token) || empty($settings->key)) {
+        if (empty($settings->token)) {
             return null;
         }
 
-        $response = $this->_request('GET','/Login/GetTemporaryToken',[
-            'query' => [
-                'privateKey' => App::parseEnv($settings->key)
-            ]
-        ]);
+        $params = [];
+        if (!empty($settings->key)) {
+            $params['query'] = ['privateKey' => App::parseEnv($settings->key)];
+        }
+
+        $response = $this->_request('GET', '/Login/GetTemporaryToken', $params);
 
         if (!is_string($response) || $response === '') {
             return null;
@@ -712,8 +713,9 @@ class ImageShop extends Component
     private function _request(string $method='GET', string $action='', array $params=[]): mixed
     {
         $settings = Plugin::$plugin->getSettings();
-        // If no token is sent or set in settings
-        if (empty($settings->token) || empty($settings->key)) {
+        // If no token is set in settings, skip the call.
+        // privateKey is optional per the ImageShop API; auth is via the Token header.
+        if (empty($settings->token)) {
             return null;
         }
 

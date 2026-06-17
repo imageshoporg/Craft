@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## 3.1.4 - 2026-06-17
+### Fixed
+- **Private key is no longer required.** The Imageshop API only needs the persistent `token` (sent as the `Token:` request header) to mint a temporary picker token — `privateKey` is documented as optional. Previously the plugin enforced `key` as required at three layers (settings UI red asterisk, `Settings` model validation rule, and the `_request()` / `getTemporaryToken()` guard rails), so token-only accounts could not save settings *or* open the image picker. Now: the Key field is optional in the settings form, the model only requires `token` + `language`, and the service includes `privateKey` in the temporary-token request only when it is set.
+
 ## 3.1.3 - 2026-06-16
 ### Fixed
 - Installation instructions now work end-to-end. The Composer package name, the Craft plugin handle, and the README all consistently reference `imageshop-dam`. Previously, 3.1.1 changed the plugin's handle to `imageshop-plugin` and 3.1.2 also renamed the Composer `name` field, but the package remained published on Packagist as `imageshop/imageshop-dam` — leaving three mismatching identifiers and breaking both `composer require imageshop/imageshop-plugin` (404 on Packagist) and `php craft plugin/install imageshop-dam` (handle not found). Fixes [#6](https://github.com/imageshoporg/Craft/issues/6).
