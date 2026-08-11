@@ -39,7 +39,7 @@ class ImageShop extends Component
      * Durable store for permalinks. Deliberately not a cache — see
      * getCachedPermalink().
      */
-    private const PERMALINK_TABLE = '{{%imageshop-dam_permalinks}}';
+    public const PERMALINK_TABLE = '{{%imageshop-dam_permalinks}}';
 
     /**
      * Cache key prefix for the permalink back-off. Only failures are cached
@@ -709,6 +709,14 @@ class ImageShop extends Component
      *
      * A cache miss must therefore never be able to reach the API. The only
      * thing cached here is *failure*, as a short back-off.
+     *
+     * Stored permalinks never expire. That is deliberate, and it rests on
+     * Imageshop confirming that a permalink keeps resolving to the current
+     * image when that image is replaced under the same documentId — so there
+     * is nothing to invalidate. Do not add a max age here without revisiting
+     * that: an expiry would reintroduce exactly the churn this replaced, just
+     * on a slower cycle. `php craft imageshop-dam/permalinks/clear` exists as
+     * the manual escape hatch if a permalink ever does need recreating.
      *
      * @param int $documentId Document Id
      * @param int $width Desired width (0 for auto)

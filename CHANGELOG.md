@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 - `services\ImageShop::clearPermalinks(?int $documentId = null)` for invalidating stored permalinks, either for one document or all of them.
+- `php craft imageshop-dam/permalinks/stats` and `php craft imageshop-dam/permalinks/clear` console commands. Stored permalinks never expire — Imageshop have confirmed a permalink keeps resolving to the current image when that image is replaced under the same document id, so there is nothing to invalidate on a schedule. `clear` is the manual escape hatch for the exceptions; it takes `--document-id` to limit the blast radius, and clearing everything requires `--force` when run non-interactively, since every deleted permalink is recreated cold on the next request.
 - `test-permalinks.php` covering permalink durability, including an explicit regression test that a full cache flush does not mint a new permalink.
 
 ### Changed
