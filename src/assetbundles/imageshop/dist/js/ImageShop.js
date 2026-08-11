@@ -193,11 +193,21 @@
                     obj.$hiddenInput.val(JSON.stringify(updatedData));
                 });
 
-                this.$container.find('[data-imageshop-trigger-settings]').on('click', function () {
-                    $(this)
+                this.$container.find('[data-imageshop-trigger-settings]').off('click.imageshopSettings').on('click.imageshopSettings', function () {
+                    var $panel = $(this)
                         .closest('[data-imageshop-image-wrapper]')
-                        .find('[data-imageshop-alt-wrapper]')
-                        .toggle();
+                        .find('[data-imageshop-alt-wrapper]');
+
+                    // The template hides this panel with the `hidden` attribute,
+                    // so toggle that rather than inline display. .toggle() only
+                    // wins while nothing declares [hidden]{display:none
+                    // !important} — under such a rule it sets display:block,
+                    // the panel stays invisible, and because jQuery decides
+                    // show-vs-hide by measuring the element it then reads as
+                    // hidden forever and can never be opened. No error is
+                    // raised, so the cog just appears dead.
+                    // See imageshoporg/Craft#7.
+                    $panel.css('display', '').prop('hidden', !$panel.prop('hidden'));
                 });
             },
 
