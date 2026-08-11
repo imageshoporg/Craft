@@ -32,6 +32,45 @@ use GuzzleHttp\Exception\GuzzleException;
  */
 class ImageShop extends Component
 {
+    // Constants
+    // =========================================================================
+
+    /**
+     * Durable store for permalinks. Deliberately not a cache — see
+     * getCachedPermalink().
+     */
+    private const PERMALINK_TABLE = '{{%imageshop-dam_permalinks}}';
+
+    /**
+     * Cache key prefix for the permalink back-off. Only failures are cached
+     * here; successes live in the database.
+     */
+    private const PERMALINK_FAILURE_PREFIX = 'imageshop_permalink_failed_';
+
+    /**
+     * How long to stop retrying a permalink after the API fails, in seconds.
+     * Long enough to ride out a blip without hammering, short enough that
+     * images come back without operator intervention.
+     */
+    private const PERMALINK_FAILURE_TTL = 300;
+
+    /**
+     * Upper bound on requested dimensions, so the anonymous permalink action
+     * cannot be used to create unbounded rows and API-side permalinks.
+     */
+    private const PERMALINK_MAX_DIMENSION = 5000;
+
+    // Private Properties
+    // =========================================================================
+
+    /**
+     * Per-request memo of stored permalinks, keyed by documentId, each mapping
+     * "{width}x{height}" => url. Collapses a multi-width srcset into one query.
+     *
+     * @var array<int, array<string, string>>
+     */
+    private array $_permalinkMemo = [];
+
     // Public Methods
     // =========================================================================
 
@@ -658,7 +697,18 @@ class ImageShop extends Component
     }
 
     /**
-     * Gets a cached permanent CDN URL for a document at a specific size.
+     * Gets a permanent CDN URL for a document at a specific size, creating it
+     * via the API only if we have never created it before.
+     *
+     * Permalinks are stored in the database rather than the cache. This matters:
+     * /Permalink/CreatePermaLinkFromDocumentId is not idempotent, so every call
+     * mints a brand new permalink. Backing this with a cache meant that any
+     * cache flush — a deploy, a container restart, or a second app node with its
+     * own file cache — silently created a new URL that CloudFront had never
+     * seen, costing several seconds on the next page load.
+     *
+     * A cache miss must therefore never be able to reach the API. The only
+     * thing cached here is *failure*, as a short back-off.
      *
      * @param int $documentId Document Id
      * @param int $width Desired width (0 for auto)
@@ -667,13 +717,158 @@ class ImageShop extends Component
      **/
     public function getCachedPermalink(int $documentId, int $width = 0, int $height = 0): ?string
     {
-        $cacheKey = "imageshop_permalink_{$documentId}_{$width}_{$height}";
+        if ($documentId <= 0) {
+            return null;
+        }
 
-        $url = Craft::$app->getCache()->getOrSet($cacheKey, function () use ($documentId, $width, $height) {
-            return $this->getPermalink($documentId, $width, $height) ?? false;
-        }, 60 * 60 * 24 * 30); // 30 days
+        // Guard against absurd dimensions creating junk rows. The public
+        // permalink action takes width/height straight from query params.
+        $width = max(0, min($width, self::PERMALINK_MAX_DIMENSION));
+        $height = max(0, min($height, self::PERMALINK_MAX_DIMENSION));
 
-        return $url ?: null;
+        $sizeKey = $width . 'x' . $height;
+
+        // 1. Durable store. One query per document per request covers every
+        //    size, so a getSrcset() call spanning nine widths is a single read.
+        $stored = $this->_loadPermalinksForDocument($documentId);
+        if (isset($stored[$sizeKey])) {
+            return $stored[$sizeKey];
+        }
+
+        // 2. Back off if the API just failed for this derivative, so an
+        //    Imageshop outage cannot turn every render into N failing calls.
+        $failureKey = self::PERMALINK_FAILURE_PREFIX . $documentId . '_' . $sizeKey;
+        if (Craft::$app->getCache()->get($failureKey) !== false) {
+            return null;
+        }
+
+        // 3. Mint one. This is the only path that calls the API, and for a
+        //    given document and size it should run exactly once per install.
+        $url = $this->getPermalink($documentId, $width, $height);
+
+        if ($url === null) {
+            Craft::$app->getCache()->set($failureKey, true, self::PERMALINK_FAILURE_TTL);
+            return null;
+        }
+
+        $url = $this->_storePermalink($documentId, $width, $height, $url);
+        $this->_permalinkMemo[$documentId][$sizeKey] = $url;
+
+        return $url;
+    }
+
+    /**
+     * Deletes stored permalinks, forcing them to be recreated on next request.
+     *
+     * @param int|null $documentId Limit to one document, or null for all
+     * @return int Number of rows deleted
+     **/
+    public function clearPermalinks(?int $documentId = null): int
+    {
+        try {
+            $deleted = Craft::$app->getDb()
+                ->createCommand()
+                ->delete(self::PERMALINK_TABLE, $documentId !== null ? ['documentId' => $documentId] : '')
+                ->execute();
+        } catch (\yii\db\Exception $e) {
+            Craft::warning('Could not clear permalinks: ' . $e->getMessage(), 'imageshop-dam');
+            return 0;
+        }
+
+        if ($documentId !== null) {
+            unset($this->_permalinkMemo[$documentId]);
+        } else {
+            $this->_permalinkMemo = [];
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Loads every stored permalink for a document, memoized per request.
+     *
+     * @param int $documentId Document Id
+     * @return array Map of "{width}x{height}" => url
+     **/
+    private function _loadPermalinksForDocument(int $documentId): array
+    {
+        if (array_key_exists($documentId, $this->_permalinkMemo)) {
+            return $this->_permalinkMemo[$documentId];
+        }
+
+        $permalinks = [];
+
+        try {
+            $rows = (new Query())
+                ->select(['width', 'height', 'url'])
+                ->from(self::PERMALINK_TABLE)
+                ->where(['documentId' => $documentId])
+                ->all();
+
+            foreach ($rows as $row) {
+                // Never hand back a stored value that is not a URL, however it
+                // got there. A skipped row is re-minted on demand, guarded by
+                // the failure back-off.
+                if ($this->_isPermalinkUrl($row['url'])) {
+                    $permalinks[$row['width'] . 'x' . $row['height']] = $row['url'];
+                }
+            }
+        } catch (\yii\db\Exception $e) {
+            // Most likely the migration has not run yet. Fall through to the
+            // API rather than taking image rendering down entirely.
+            Craft::warning('Could not read permalink table: ' . $e->getMessage(), 'imageshop-dam');
+        }
+
+        $this->_permalinkMemo[$documentId] = $permalinks;
+
+        return $permalinks;
+    }
+
+    /**
+     * Stores a newly minted permalink, keeping whichever one landed first.
+     *
+     * Two app nodes can race and each mint a permalink for the same derivative.
+     * Both URLs resolve to the same image, so rather than letting the later
+     * writer overwrite, the insert is a no-op on conflict and the stored value
+     * wins. Every node then converges on one URL and CloudFront stays warm.
+     *
+     * @return string The canonical stored URL, or the passed URL if it could not be stored
+     **/
+    private function _storePermalink(int $documentId, int $width, int $height, string $url): string
+    {
+        $now = Db::prepareDateForDb(new \DateTime());
+
+        try {
+            Craft::$app->getDb()
+                ->createCommand()
+                ->upsert(self::PERMALINK_TABLE, [
+                    'documentId' => $documentId,
+                    'width' => $width,
+                    'height' => $height,
+                    'url' => $url,
+                    'dateCreated' => $now,
+                    'dateUpdated' => $now,
+                ], false)
+                ->execute();
+
+            $canonical = (new Query())
+                ->select(['url'])
+                ->from(self::PERMALINK_TABLE)
+                ->where([
+                    'documentId' => $documentId,
+                    'width' => $width,
+                    'height' => $height,
+                ])
+                ->scalar();
+
+            if (is_string($canonical) && $canonical !== '') {
+                return $canonical;
+            }
+        } catch (\yii\db\Exception $e) {
+            Craft::warning('Could not store permalink: ' . $e->getMessage(), 'imageshop-dam');
+        }
+
+        return $url;
     }
 
     /**
@@ -699,7 +894,22 @@ class ImageShop extends Component
         }
 
         $data = Json::decode($response);
-        return $data['url'] ?? null;
+
+        // For a deleted or inaccessible document the API answers 200 with a
+        // JSON body whose `url` is the literal string "Access denied". The
+        // isJsonObject() guard above passes, so the value has to be validated
+        // as a URL or it ends up rendered as <img src="Access denied">.
+        // See imageshoporg/Craft#14.
+        return $this->_isPermalinkUrl($data['url'] ?? null) ? $data['url'] : null;
+    }
+
+    /**
+     * Whether a value returned by, or stored for, the permalink API is actually
+     * a usable URL rather than an error string.
+     **/
+    private function _isPermalinkUrl(mixed $url): bool
+    {
+        return is_string($url) && preg_match('~^https?://~i', $url) === 1;
     }
 
     /**
@@ -721,6 +931,10 @@ class ImageShop extends Component
 
         $client = new Client([
             'base_uri' => 'https://api.imageshop.no',
+            // Without these Guzzle waits on PHP's default_socket_timeout (60s).
+            // A slow API would otherwise stall a page render for a minute per image.
+            'connect_timeout' => 5,
+            'timeout' => 10,
             'headers' => [
                 'Token' => App::parseEnv($settings->token),
                 'Accept' => 'application/json',

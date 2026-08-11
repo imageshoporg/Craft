@@ -17,11 +17,15 @@ class PickerController extends Controller
 
         $request = Craft::$app->getRequest();
 
+        // These arrive form-encoded from jQuery, so a JS boolean false becomes
+        // the string "false" — which (bool) casts to true, forcing every picker
+        // option on regardless of the field settings. filter_var reads the
+        // string as intended. See imageshoporg/Craft#10.
         $options = [
-            'showSizeDialogue' => (bool) $request->getBodyParam('showSizeDialogue', false),
-            'showCropDialogue' => (bool) $request->getBodyParam('showCropDialogue', false),
-            'showDescription'  => (bool) $request->getBodyParam('showDescription', false),
-            'allowMultiple'    => (bool) $request->getBodyParam('allowMultiple', false),
+            'showSizeDialogue' => filter_var($request->getBodyParam('showSizeDialogue', false), FILTER_VALIDATE_BOOLEAN),
+            'showCropDialogue' => filter_var($request->getBodyParam('showCropDialogue', false), FILTER_VALIDATE_BOOLEAN),
+            'showDescription'  => filter_var($request->getBodyParam('showDescription', false), FILTER_VALIDATE_BOOLEAN),
+            'allowMultiple'    => filter_var($request->getBodyParam('allowMultiple', false), FILTER_VALIDATE_BOOLEAN),
             'sizes'            => (string) $request->getBodyParam('sizes', ''),
             'culture'          => (string) $request->getBodyParam('culture', ''),
         ];
