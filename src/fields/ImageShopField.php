@@ -172,7 +172,10 @@ class ImageShopField extends Field
     public function getInputHtml(mixed $value, ?ElementInterface $element = null): string
     {
         $settings = ImageShop::$plugin->getSettings();
-        $culture = $this->getCurrentAdminLanguage() ?: $settings->language;
+        // Resolve the language from the element being edited, not the request.
+        // Craft 5 renders new Matrix blocks over AJAX without a `site` param.
+        $language = $this->getCurrentAdminLanguage($element);
+        $culture = $language ?: $settings->language;
 
         // Register our asset bundle
         Craft::$app->getView()->registerAssetBundle(ImageShopAsset::class);
@@ -216,6 +219,7 @@ class ImageShopField extends Field
                 'field' => $this,
                 'id' => $id,
                 'namespace' => $namespacedId,
+                'language' => $language,
             ]
         );
     }
@@ -228,16 +232,51 @@ class ImageShopField extends Field
         return Type::listOf(ImageShopType::getType());
     }
 
-    public function getCurrentAdminLanguage(): ?string
+    /**
+     * Returns the Imageshop language code the CP field should read from and
+     * write to for the given element.
+     *
+     * The element's own site is authoritative. The `site` query param is only
+     * present on full CP page loads; Craft 5 renders new Matrix blocks and
+     * slideout editors over AJAX with just a `siteId` body param, so relying on
+     * the request made a block added on a non-primary site render its alt text
+     * and description editors under the primary site's language, and the
+     * editor's text ended up in the wrong `text` block.
+     *
+     * Resolution order: element site → `site` handle param → `siteId` param →
+     * primary site. Request params are only consulted on web requests.
+     *
+     * @param ElementInterface|null $element The element the field is rendered for
+     */
+    public function getCurrentAdminLanguage(?ElementInterface $element = null): ?string
     {
+        $sites = Craft::$app->getSites();
         $site = null;
-        $handle = Craft::$app->request->getParam('site');
-        if ($handle) {
-            $site = Craft::$app->sites->getSiteByHandle($handle);
+
+        if ($element && !empty($element->siteId)) {
+            $site = $sites->getSiteById((int)$element->siteId);
         }
-        if (is_null($site)) {
-            $site = Craft::$app->sites->getPrimarySite();
+
+        if ($site === null) {
+            $request = Craft::$app->getRequest();
+            if ($request instanceof \craft\web\Request) {
+                $handle = $request->getParam('site');
+                if ($handle) {
+                    $site = $sites->getSiteByHandle($handle);
+                }
+                if ($site === null) {
+                    $siteId = $request->getParam('siteId');
+                    if ($siteId) {
+                        $site = $sites->getSiteById((int)$siteId);
+                    }
+                }
+            }
         }
+
+        if ($site === null) {
+            $site = $sites->getPrimarySite();
+        }
+
         return Plugin::getInstance()->service->getImageshopLanguageForSite($site);
     }
 

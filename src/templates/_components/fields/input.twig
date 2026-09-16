@@ -15,8 +15,11 @@
 
 {% import "_includes/forms" as forms %}
 
+{# `language` is resolved by the field from the element's site; the request-based
+   fallback only applies if this template is ever rendered without it. #}
+{% set language = language ?? field.getCurrentAdminLanguage() %}
 
-<div id="imageshop-{{ field.id }}" data-id="{{ namespace }}imageshop" data-current-language="{{ field.getCurrentAdminLanguage() }}">
+<div id="imageshop-{{ field.id }}" data-id="{{ namespace }}imageshop" data-current-language="{{ language }}">
 
     <div class="mb-2">
         <div class="imageshop-preview element removable large hasthum" data-imageshop-list>
@@ -24,13 +27,13 @@
                 {% if value is array %}
                     {% include 'imageshop-dam/_components/fields/input-list.twig' with {
                         images: value,
-                        language: field.getCurrentAdminLanguage(),
+                        language: language,
                     } %}
                 {% else %}
                     {% if value.image %}
                         {% include 'imageshop-dam/_components/fields/input-list.twig' with {
                             images: [value.image],
-                            language: field.getCurrentAdminLanguage(),
+                            language: language,
                         } %}
                     {% endif %}
                 {% endif %}
