@@ -15,9 +15,16 @@ class Install extends Migration
      */
     public function safeUp(): bool
     {
+        // One row per sync run. `lastUpdated` is the watermark the run
+        // currently vouches for; `watermark` is the one it will vouch for once
+        // every job it queued has completed. See services\Sync.
         $this->createTable('{{%imageshop-dam_sync}}', [
             'id' => $this->primaryKey(),
             'lastUpdated' => $this->dateTime(),
+            'watermark' => $this->dateTime()->null(),
+            'jobsQueued' => $this->integer()->notNull()->defaultValue(0),
+            'jobsCompleted' => $this->integer()->notNull()->defaultValue(0),
+            'jobsFailed' => $this->integer()->notNull()->defaultValue(0),
             'documentCache' => $this->longText()
         ]);
 

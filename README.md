@@ -114,6 +114,10 @@ In addition to the image itself, metadata such as the image title and alt text a
 
 You can override the image description and alt text by clicking the cog icon that appears in the top‑left corner when you hover over an image in the control panel. Doing so reveals the override input fields. This works for all languages, and you can also provide descriptions and alt text for languages that were not originally available in the Imageshop service.
 
+Overrides are stored separately from the text synced from Imageshop, so running the metadata sync never destroys them. The text from Imageshop is shown as the field's placeholder; leave the field empty to use it, or type to override it for this element only. `image.getAltText()` and `image.getDescription()` return the override when one exists and the synced text otherwise. `image.getSyncedAltText()` and `image.getSyncedDescription()` always return the Imageshop text, and `image.hasOverride('altText')` tells you which one you got.
+
+Note that an override cannot blank out a synced value: an empty field means "use the Imageshop text".
+
 ## Per-site language mapping
 
 By default the plugin derives the Imageshop language code from each Craft site's language — e.g. a site whose Craft language is `nb-NO` reads Imageshop's `no` text block. If that automatic mapping isn't what you want, you can override it per site.
@@ -344,10 +348,32 @@ To access it, go to **Utilities → Imageshop**, and click **Sync metadata**.
 
 The sync runs in two phases:
 
-1. **Fetch changes** — The plugin calls the Imageshop API to find all documents that have changed since the last sync. For each changed document, it fetches the latest metadata in every language present in your content (e.g. `en`, `no`, `sv`).
-2. **Queue updates** — A queue job is created for each content row that contains an Imageshop field, updating stored metadata (alt text, description, credits, rights, tags, and title) with the freshly fetched API data.
+1. **Fetch changes** — The plugin calls the Imageshop API to find all documents that have changed since the last sync. For each changed document that is actually used in your content, it fetches the latest metadata in every relevant language: the languages already present in the stored value plus the Imageshop language of every Craft site.
+2. **Update elements** — A queue job is created for each element and site that uses one of the changed documents. The job updates the stored metadata (alt text, description, credits, rights, tags and title) and saves the element through Craft's element lifecycle, so element caches (including the owner of a nested entry or Matrix block), the search index and `afterSave` listeners such as Blitz are all refreshed. `dateUpdated` is left untouched.
+
+Alt text and descriptions entered in Craft are stored as local overrides and are never overwritten by the sync.
 
 Flash messages confirm how many jobs were queued, or report that no changes were found.
+
+### Running the sync from the command line
+
+The same sync is available as a console command, which is the way to keep metadata in step with Imageshop automatically:
+
+```bash
+php craft imageshop-dam/sync/run            # fetch changes and queue one job per element
+php craft imageshop-dam/sync/run --inline   # fetch changes and update elements immediately
+php craft imageshop-dam/sync/status         # show the last ten runs
+```
+
+A typical cron entry, running every 15 minutes without depending on a queue runner:
+
+```
+*/15 * * * * cd /path/to/site && php craft imageshop-dam/sync/run --inline
+```
+
+Updating from 3.2.x adds columns to the `imageshop-dam_sync` table; run `php craft migrate/all` after `composer update`.
+
+Exit codes: `0` for a successful or no-change run, `75` (temporary failure) when some requests or saves failed and will be retried, `69` (unavailable) when the Imageshop API could not be reached at all.
 
 ### Sync history
 
@@ -357,19 +383,21 @@ Each sync run is logged and displayed in a **Sync history** table directly on th
 |--------|-------------|
 | Date | When the sync was triggered |
 | Documents changed | Number of documents fetched from the API |
-| Jobs queued | Number of content rows queued for update |
-| Status | **Success** (jobs were created) or **No changes** (nothing to update) |
+| Elements | Number of element/site combinations queued (or updated, for `--inline` runs) |
+| Status | **Success**, **No changes**, **Partial** (some document requests failed; the run is retried from the same point next time) or **Failed** (the API was unreachable; nothing was changed) |
+
+A run that cannot reach the API does not advance the sync window, so documents changed during an outage are picked up by the next successful run. Each run stores its own snapshot of fetched metadata (the last 100 are kept), and queued jobs read the snapshot of the run that created them, so starting another sync while jobs are still queued cannot make them skip documents. A job whose snapshot has been pruned refetches its documents from the API. A job whose element cannot be saved (for example because another plugin's save hook declined) fails visibly in the queue and can be retried from there; in `--inline` runs such a failure marks the run *Partial* and holds the sync window so the element is retried next run.
 
 The log keeps the most recent 20 entries and prunes older ones automatically.
 
 ### When to use
 
 * When an image in the Imageshop service has been updated since it was last added to the Craft CMS system.
-* When you want to override any manual changes made to images (for example, manually edited alt text).
+* When a new site language has been added and existing images should receive text for it.
 
 ### Multi-language sync
 
-The sync fetches document metadata once per language that exists in your content. This means all language variants (English, Norwegian, Swedish, etc.) are updated in a single sync run — not just the plugin's configured default language.
+The sync fetches document metadata once per language: every language already present in the stored value, plus the Imageshop language of each Craft site. All language variants (English, Norwegian, Swedish, etc.) are updated in a single run, and a language that was missing from an image gets a new text block.
 
 ## Using Imageshop Field as an OpenGraph Image Source (SEOmatic)
 

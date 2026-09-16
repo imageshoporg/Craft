@@ -141,6 +141,17 @@
             updateAltText: function () {
                 var obj = this;
 
+                // Editor text is stored as a local override, separate from the
+                // `text` block the sync writes. An empty field means "no
+                // override": the synced Imageshop text is used instead.
+                var setOverride = function (block, key, value) {
+                    if (typeof value === 'string' && value.trim() !== '') {
+                        block[key] = value;
+                    } else {
+                        delete block[key];
+                    }
+                };
+
                 this.$container.find('[data-alt-text], [data-description-text]').on('input', function () {
                     let currentData;
                     try {
@@ -162,28 +173,32 @@
 
                         if (match) {
                             var language = obj.$container.attr('data-current-language');
-                            let textBlock = match.text[language];
 
-                            if (!textBlock) {
-                                textBlock = {
-                                    "title": null,
-                                    "description": null,
-                                    "rights": null,
-                                    "credits": null,
-                                    "tags": null,
-                                    "altText": null,
-                                    "categories": null,
-                                    "documentinfo": null
-                                };
-                                match.text[language] = textBlock;
+                            if (!match.overrides || typeof match.overrides !== 'object' || Array.isArray(match.overrides)) {
+                                match.overrides = {};
+                            }
+
+                            var block = match.overrides[language];
+                            if (!block || typeof block !== 'object' || Array.isArray(block)) {
+                                block = {};
                             }
 
                             if (isAltInput) {
-                                textBlock.altText = $(this).find('[data-alt-text]').val();
+                                setOverride(block, 'altText', $(this).find('[data-alt-text]').val());
                             }
 
                             if (isDescriptionInput) {
-                                textBlock.description = $(this).find('[data-description-text]').val();
+                                setOverride(block, 'description', $(this).find('[data-description-text]').val());
+                            }
+
+                            if (Object.keys(block).length) {
+                                match.overrides[language] = block;
+                            } else {
+                                delete match.overrides[language];
+                            }
+
+                            if (!Object.keys(match.overrides).length) {
+                                delete match.overrides;
                             }
 
                             updatedData.push(match);
