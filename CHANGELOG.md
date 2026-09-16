@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## Unreleased
+## 3.3.0 - 2026-09-16
 ### Fixed
 - **Metadata sync works on Craft 5.** The sync was built on Craft 4's content table: it read `Field::columnPrefix` (removed in Craft 5) and ran raw SQL against `craft\db\Table::CONTENT` (undefined in Craft 5), so pressing *Sync metadata* under Utilities threw immediately. The sync now finds Imageshop values through Craft's field layouts and element queries (`elements.fieldLayoutId`), which works identically on Craft 4 per-field columns and Craft 5 `elements_sites.content` JSON, and covers nested entries and Matrix blocks because they are elements with their own layouts. Fixes [#8](https://github.com/imageshoporg/Craft/issues/8).
 - **An Imageshop outage no longer advances the sync window.** `_request()` used to return `null` for "no token", a transport error and any non-200 alike, so a sync run during an outage was recorded as a successful empty run and the next run only asked for documents changed after it, silently skipping everything changed in between. Failures now surface as `false`, `getRecentlyUpdatedDocumentIds()` returns `null` when Imageshop could not be asked, and such a run is logged as *failed* without touching the watermark. When only some document requests fail, the fetched documents are applied and the run is logged as *partial* with the watermark kept, so the rest is retried next time. The watermark is also taken before the changed-ids request rather than after all fetches, so a document changed mid-run is reported to the next run.
