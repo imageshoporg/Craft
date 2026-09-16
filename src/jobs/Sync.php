@@ -18,8 +18,12 @@ use Imageshop\Imageshop\ImageShop;
  * runs), the job fetches its documents from the API itself instead of
  * silently doing nothing.
  *
- * A save that fails, or an API fetch that fails, throws so the job shows up
- * as failed in the queue with the reason and can be retried from there.
+ * Every outcome is reported back to the run: the run's watermark only
+ * advances once all of its jobs have completed successfully. A save that
+ * fails, or an API fetch that fails, is reported as a failure and then
+ * rethrown so the job shows up as failed in the queue with the reason and
+ * can be retried from there. Until it succeeds, the run never completes, so
+ * the next sync run picks the element up again.
  *
  * Jobs queued by versions before 3.3.0 carried `rowId`, `rowUid`, a string
  * `documentIds` and a string `fields`. Those payloads must still unserialize
@@ -51,6 +55,28 @@ class Sync extends BaseJob
         }
 
         $plugin = ImageShop::getInstance();
+
+        try {
+            $this->apply();
+        } catch (\Throwable $e) {
+            if ($this->runId) {
+                $plugin->service->completeSyncJob($this->runId, false);
+            }
+            throw $e;
+        }
+
+        if ($this->runId) {
+            $plugin->service->completeSyncJob($this->runId, true);
+        }
+    }
+
+    /**
+     * Loads the run's snapshot (or refetches the documents) and applies it to
+     * the element. Throws when the element could not be updated.
+     */
+    protected function apply(): void
+    {
+        $plugin = ImageShop::getInstance();
         $documentCache = $this->runId ? $plugin->service->getDocumentCache($this->runId) : [];
 
         if (empty($documentCache)) {
@@ -64,7 +90,7 @@ class Sync extends BaseJob
             $languages = array_values(array_unique(array_merge($this->languages, $plugin->sync->getSiteLanguages())));
             $fetched = $plugin->sync->fetchDocuments($this->documents, $languages);
             if ($fetched['failures'] > 0) {
-                throw new \RuntimeException("Sync snapshot for run {$this->runId} is gone and the Imageshop API could not be reached to refetch documents " . implode(', ', $this->documents) . '.');
+                throw new \RuntimeException("Sync snapshot for run {$this->runId} is gone and the Imageshop API request to refetch documents " . implode(', ', $this->documents) . ' failed.');
             }
             $documentCache = $fetched['cache'];
             if (empty($documentCache)) {

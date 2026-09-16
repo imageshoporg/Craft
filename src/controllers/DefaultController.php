@@ -23,7 +23,7 @@ class DefaultController extends Controller
 
         if ($result['status'] === 'failed') {
             Craft::$app->getSession()->setError(
-                Craft::t('imageshop-dam', 'Could not reach the Imageshop API. Nothing was changed; try again later.')
+                Craft::t('imageshop-dam', 'The Imageshop API request failed. Nothing was changed; check the Craft logs and try again later.')
             );
         } elseif ($result['status'] === 'partial') {
             Craft::$app->getSession()->setError(

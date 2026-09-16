@@ -275,9 +275,12 @@ class ImageShop extends Component
     }
 
     /**
-     * Fetches the latest metadata for changed documents into the document cache.
+     * Fetches the latest metadata for changed documents into a new run
+     * snapshot. The run's watermark advances once `updateImages()` has queued
+     * its jobs and they have completed, so the pair still forms a complete
+     * two-phase sync.
      *
-     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->updateRecentlyUpdatedCache()`.
+     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->run()`.
      **/
     public function updateRecentlyUpdatedCache(): void
     {
@@ -313,8 +316,9 @@ class ImageShop extends Component
 
     /**
      * Queues sync jobs for every element referencing the latest run's cache.
+     * The run's watermark advances when the last of those jobs completes.
      *
-     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->queueSyncJobs()`.
+     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->run()`.
      * @return int Number of queue jobs created
      **/
     public function updateImages(): int
@@ -519,16 +523,18 @@ class ImageShop extends Component
     /**
      * Stores a sync run's document cache as a new snapshot and returns the run id.
      *
-     * `$lastUpdated` is the sync watermark this run vouches for: the next run
-     * asks Imageshop for documents changed after the newest watermark on
-     * record. Pass the previous watermark to store a partial result without
-     * advancing the window.
+     * `$lastUpdated` is the sync watermark this run vouches for right now: the
+     * next run asks Imageshop for documents changed after the newest watermark
+     * on record. `$watermark` is the one the run will vouch for once all of
+     * its queued jobs have completed (see `completeSyncJob()`); pass the same
+     * value as `$lastUpdated` for a run that must not advance the window.
      *
      * @param array $documentCache [documentId => [lang => apiDoc]]
      * @param string|null $lastUpdated DB-formatted timestamp, or null for now
+     * @param string|null $watermark DB-formatted timestamp to advance to on completion, or null for none
      * @return int The run id
      **/
-    public function setDocumentCache(array $documentCache, ?string $lastUpdated = null): int
+    public function setDocumentCache(array $documentCache, ?string $lastUpdated = null, ?string $watermark = null): int
     {
         $db = Craft::$app->getDb();
         $table = '{{%imageshop-dam_sync}}';
@@ -536,6 +542,7 @@ class ImageShop extends Component
         $db->createCommand()
             ->insert($table, [
                 'lastUpdated' => $lastUpdated ?? Db::prepareDateForDb(new \DateTime()),
+                'watermark' => $watermark,
                 'documentCache' => Json::encode($documentCache),
             ])
             ->execute();
@@ -578,6 +585,66 @@ class ImageShop extends Component
             ->createCommand()
             ->update('{{%imageshop-dam_sync}}', ['lastUpdated' => $watermark], ['id' => $runId])
             ->execute();
+    }
+
+    /**
+     * Records how many jobs a run queued. Call this before pushing them, so a
+     * job that finishes quickly cannot see a count of zero and complete the
+     * run early. A run that queued nothing completes immediately.
+     **/
+    public function setSyncRunJobs(int $runId, int $jobsQueued): void
+    {
+        Craft::$app->getDb()
+            ->createCommand()
+            ->update('{{%imageshop-dam_sync}}', ['jobsQueued' => $jobsQueued, 'jobsCompleted' => 0, 'jobsFailed' => 0], ['id' => $runId])
+            ->execute();
+
+        if ($jobsQueued === 0) {
+            $this->completeSyncRunIfDone($runId);
+        }
+    }
+
+    /**
+     * Records the outcome of one queued job and advances the run's watermark
+     * once every job it queued has succeeded.
+     *
+     * A failed job is counted but never completes the run, so its watermark
+     * stays put and the next sync run asks Imageshop for the same changes
+     * again and queues the element afresh. If the failed job is retried from
+     * the queue and succeeds, it counts as completed then.
+     **/
+    public function completeSyncJob(int $runId, bool $success): void
+    {
+        $column = $success ? 'jobsCompleted' : 'jobsFailed';
+
+        Craft::$app->getDb()
+            ->createCommand()
+            ->update('{{%imageshop-dam_sync}}', [$column => new \yii\db\Expression("[[{$column}]] + 1")], ['id' => $runId])
+            ->execute();
+
+        if ($success) {
+            $this->completeSyncRunIfDone($runId);
+        }
+    }
+
+    /**
+     * Advances a run's watermark if all of its queued jobs have completed.
+     **/
+    public function completeSyncRunIfDone(int $runId): void
+    {
+        $row = (new Query())
+            ->select(['watermark', 'lastUpdated', 'jobsQueued', 'jobsCompleted'])
+            ->from('{{%imageshop-dam_sync}}')
+            ->where(['id' => $runId])
+            ->one();
+
+        if (!$row || empty($row['watermark']) || $row['watermark'] === $row['lastUpdated']) {
+            return;
+        }
+
+        if ((int)$row['jobsCompleted'] >= (int)$row['jobsQueued']) {
+            $this->advanceSyncWatermark($runId, $row['watermark']);
+        }
     }
 
     /**

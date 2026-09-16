@@ -13,7 +13,9 @@ namespace Imageshop\Imageshop\services;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\db\Query;
 use craft\db\Table;
+use craft\elements\db\ElementQueryInterface;
 use craft\helpers\Db;
 use Imageshop\Imageshop\fields\ImageShopField;
 use Imageshop\Imageshop\ImageShop as Plugin;
@@ -65,23 +67,29 @@ class Sync extends Component
     public function getImageshopFieldLayouts(): array
     {
         $result = [];
+        $fields = Craft::$app->getFields();
 
-        foreach (Craft::$app->getFields()->getAllLayouts() as $layout) {
-            if (!$layout->id || !$layout->type) {
-                continue;
-            }
-
-            $handles = [];
-            foreach ($layout->getCustomFields() as $field) {
-                if ($field instanceof ImageShopField) {
-                    // Craft 5 field instances may carry their own handle, so
-                    // read it from the layout's field, not the global field.
-                    $handles[] = $field->handle;
+        // Ask per element type rather than via Fields::getAllLayouts(), which
+        // only exists in Craft 5. getAllElementTypes() includes MatrixBlock on
+        // Craft 4 and any element types plugins register.
+        foreach (Craft::$app->getElements()->getAllElementTypes() as $elementType) {
+            foreach ($fields->getLayoutsByType($elementType) as $layout) {
+                if (!$layout->id) {
+                    continue;
                 }
-            }
 
-            if (!empty($handles)) {
-                $result[$layout->type][$layout->id] = array_values(array_unique($handles));
+                $handles = [];
+                foreach ($layout->getCustomFields() as $field) {
+                    if ($field instanceof ImageShopField) {
+                        // Craft 5 field instances may carry their own handle, so
+                        // read it from the layout's field, not the global field.
+                        $handles[] = $field->handle;
+                    }
+                }
+
+                if (!empty($handles)) {
+                    $result[$elementType][$layout->id] = array_values(array_unique($handles));
+                }
             }
         }
 
@@ -120,81 +128,149 @@ class Sync extends Component
                 continue;
             }
 
-            /** @var ElementInterface|string $elementType */
-            $query = $elementType::find()
-                ->andWhere(['elements.fieldLayoutId' => array_keys($layouts)])
-                ->siteId('*')
-                ->status(null)
-                ->drafts(null)
-                ->provisionalDrafts(null);
-
-            foreach ($query->each() as $element) {
-                /** @var ElementInterface $element */
-                $layoutId = $element->getFieldLayout()?->id ?? $element->fieldLayoutId ?? null;
-                $handles = $layouts[$layoutId] ?? null;
-                if (!$handles) {
-                    continue;
-                }
-
-                $fields = [];
-                $languages = [];
-
-                foreach ($handles as $handle) {
-                    $models = $element->getFieldValue($handle);
-                    if (!is_array($models) || empty($models)) {
+            foreach ($this->buildScanQueries($elementType, array_keys($layouts)) as $query) {
+                foreach ($query->each() as $element) {
+                    /** @var ElementInterface $element */
+                    $layoutId = $element->getFieldLayout()?->id ?? $element->fieldLayoutId ?? null;
+                    $handles = $layouts[$layoutId] ?? null;
+                    if (!$handles) {
                         continue;
                     }
 
-                    $ids = [];
-                    foreach ($models as $model) {
-                        if (!$model instanceof ImageModel) {
+                    $fields = [];
+                    $languages = [];
+
+                    foreach ($handles as $handle) {
+                        $models = $element->getFieldValue($handle);
+                        if (!is_array($models) || empty($models)) {
                             continue;
                         }
 
-                        $id = (int)$model->getDocumentId();
-                        if (!$id) {
-                            continue;
-                        }
+                        $ids = [];
+                        foreach ($models as $model) {
+                            if (!$model instanceof ImageModel) {
+                                continue;
+                            }
 
-                        $json = $model->getJson();
-                        $text = is_array($json) && isset($json['text']) && is_array($json['text']) ? $json['text'] : [];
-                        foreach (array_keys($text) as $lang) {
-                            $languages[(string)$lang] = true;
-                        }
+                            $id = (int)$model->getDocumentId();
+                            if (!$id) {
+                                continue;
+                            }
 
-                        $include = $wanted === null || isset($wanted[$id]);
-                        if (!$include && !empty($required)) {
-                            foreach ($required as $lang) {
-                                if (!isset($text[$lang])) {
-                                    $include = true;
-                                    break;
+                            $json = $model->getJson();
+                            $text = is_array($json) && isset($json['text']) && is_array($json['text']) ? $json['text'] : [];
+                            foreach (array_keys($text) as $lang) {
+                                $languages[(string)$lang] = true;
+                            }
+
+                            $include = $wanted === null || isset($wanted[$id]);
+                            if (!$include && !empty($required)) {
+                                foreach ($required as $lang) {
+                                    if (!isset($text[$lang])) {
+                                        $include = true;
+                                        break;
+                                    }
                                 }
+                            }
+
+                            if ($include) {
+                                $ids[$id] = true;
                             }
                         }
 
-                        if ($include) {
-                            $ids[$id] = true;
+                        if (!empty($ids)) {
+                            $fields[$handle] = array_keys($ids);
                         }
                     }
 
-                    if (!empty($ids)) {
-                        $fields[$handle] = array_keys($ids);
+                    if (empty($fields)) {
+                        continue;
                     }
-                }
 
-                if (empty($fields)) {
-                    continue;
+                    yield [
+                        'elementType' => $elementType,
+                        'elementId' => (int)$element->id,
+                        'siteId' => (int)$element->siteId,
+                        'fields' => $fields,
+                        'languages' => array_keys($languages),
+                    ];
                 }
-
-                yield [
-                    'elementType' => $elementType,
-                    'elementId' => (int)$element->id,
-                    'siteId' => (int)$element->siteId,
-                    'fields' => $fields,
-                    'languages' => array_keys($languages),
-                ];
             }
         }
+    }
+
+    /**
+     * Builds the element queries that scan one element type for the given
+     * field layouts. The caller still checks each element's real field layout
+     * in PHP; these queries only narrow the scan where that is safe.
+     *
+     * `elements.fieldLayoutId` cannot be the filter: Craft 4 leaves it NULL
+     * for entries (their layout comes from the entry type at runtime) and only
+     * fills it for Matrix blocks, while Craft 5 fills it for everything. So:
+     *
+     *  - Entries are narrowed by entry type, which is authoritative on both
+     *    versions.
+     *  - Craft 4 Matrix blocks keep their content in a table per Matrix field,
+     *    and `MatrixBlockQuery` only joins it when it knows the field (it can
+     *    infer that from `id`, which a scan does not have), so blocks are
+     *    scanned one Matrix field at a time. Craft 5 has no MatrixBlock
+     *    element, so that branch is inert there.
+     *  - Everything else is narrowed by `elements.fieldLayoutId` where it is
+     *    set, and scanned in full where it is NULL.
+     *
+     * @param string $elementType Element class
+     * @param int[] $layoutIds Field layouts that contain an Imageshop field
+     * @return ElementQueryInterface[]
+     */
+    protected function buildScanQueries(string $elementType, array $layoutIds): array
+    {
+        /** @var ElementInterface|string $elementType */
+        $build = fn(): ElementQueryInterface => $elementType::find()
+            ->siteId('*')
+            ->status(null)
+            ->drafts(null)
+            ->provisionalDrafts(null);
+
+        if ($elementType === 'craft\\elements\\Entry') {
+            $typeIds = [];
+            foreach ($this->getAllEntryTypes() as $entryType) {
+                if (in_array((int)$entryType->fieldLayoutId, $layoutIds, true)) {
+                    $typeIds[] = (int)$entryType->id;
+                }
+            }
+
+            return $typeIds ? [$build()->typeId($typeIds)] : [];
+        }
+
+        if ($elementType === 'craft\\elements\\MatrixBlock') {
+            $fieldIds = (new Query())
+                ->select('fieldId')
+                ->distinct()
+                ->from('{{%matrixblocktypes}}')
+                ->where(['fieldLayoutId' => $layoutIds])
+                ->column();
+
+            return array_map(fn($fieldId) => $build()->fieldId((int)$fieldId), $fieldIds);
+        }
+
+        return [$build()->andWhere(['or', ['elements.fieldLayoutId' => $layoutIds], ['elements.fieldLayoutId' => null]])];
+    }
+
+    /**
+     * All entry types, from whichever service owns them on this Craft version.
+     *
+     * @return \craft\models\EntryType[]
+     */
+    protected function getAllEntryTypes(): array
+    {
+        $entries = Craft::$app->getEntries();
+        if (method_exists($entries, 'getAllEntryTypes')) {
+            // Craft 5
+            return $entries->getAllEntryTypes();
+        }
+
+        // Craft 4
+        return Craft::$app->getSections()->getAllEntryTypes();
     }
 
     /**
@@ -336,8 +412,13 @@ class Sync extends Component
      */
     protected function storeRun(array $fetch, bool $keepWatermark): int
     {
+        // The run vouches for the previous watermark until its work is done;
+        // the target watermark is advanced into place by run() (inline) or by
+        // the last completed job (queue mode). A run that must not advance
+        // gets the previous watermark as its target too.
         return Plugin::getInstance()->service->setDocumentCache(
             $fetch['cache'],
+            $fetch['previousWatermark'],
             $keepWatermark ? $fetch['previousWatermark'] : $fetch['watermark']
         );
     }
@@ -347,18 +428,25 @@ class Sync extends Component
      * in the given run's cache. Jobs carry the run id (to read that run's
      * snapshot) and their document ids (to refetch if the snapshot is gone).
      *
+     * The number of jobs is recorded on the run before any job is pushed; the
+     * run's watermark advances when the last of them completes successfully.
+     *
      * @param array $documentCache The run's cache
      * @param int $runId The run the cache belongs to
      * @return int Number of jobs queued
      */
     public function queueSyncJobs(array $documentCache, int $runId): int
     {
-        if (empty($documentCache) || !$runId) {
+        $service = Plugin::getInstance()->service;
+
+        if (!$runId) {
             return 0;
         }
 
-        $usages = iterator_to_array($this->findUsages(array_keys($documentCache)), false);
+        $usages = empty($documentCache) ? [] : iterator_to_array($this->findUsages(array_keys($documentCache)), false);
         $total = count($usages);
+
+        $service->setSyncRunJobs($runId, $total);
 
         foreach ($usages as $i => $usage) {
             $documentIds = [];
@@ -529,11 +617,12 @@ class Sync extends Component
         $failures = $fetch['failures'];
         $elements = 0;
 
-        // Store the snapshot with the previous watermark first, do the work,
-        // and advance the watermark last. If this process dies while queueing
-        // jobs or saving elements, the next run asks for the same changes
-        // again instead of skipping the ones that never got a job.
-        $runId = $this->storeRun($fetch, true);
+        // Store the snapshot vouching for the previous watermark first, do the
+        // work, and advance the watermark last. If this process dies while
+        // queueing jobs or saving elements, the next run asks for the same
+        // changes again instead of skipping the ones that never got a job.
+        // A partial fetch keeps the previous watermark as its target.
+        $runId = $this->storeRun($fetch, $failures > 0);
 
         if ($inline) {
             if (!empty($cache)) {
@@ -549,14 +638,22 @@ class Sync extends Component
                     }
                 }
             }
+
+            // Inline, this process did the work, so it advances the watermark
+            // itself unless something failed.
+            if ($failures === 0) {
+                $service->advanceSyncWatermark($runId, $fetch['watermark']);
+            }
         } else {
+            // Queue mode: the watermark advances when the last job completes;
+            // see ImageShop::completeSyncJob(). A run that queues nothing
+            // completes immediately.
             $elements = $this->queueSyncJobs($cache, $runId);
         }
 
         if ($failures > 0) {
             $status = 'partial';
         } else {
-            $service->advanceSyncWatermark($runId, $fetch['watermark']);
             $status = $elements > 0 ? 'success' : 'no_changes';
         }
 

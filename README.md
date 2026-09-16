@@ -371,6 +371,8 @@ A typical cron entry, running every 15 minutes without depending on a queue runn
 */15 * * * * cd /path/to/site && php craft imageshop-dam/sync/run --inline
 ```
 
+Updating from 3.2.x adds columns to the `imageshop-dam_sync` table; run `php craft migrate/all` after `composer update`.
+
 Exit codes: `0` for a successful or no-change run, `75` (temporary failure) when some requests or saves failed and will be retried, `69` (unavailable) when the Imageshop API could not be reached at all.
 
 ### Sync history

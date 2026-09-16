@@ -58,7 +58,7 @@ class SyncController extends Controller
         $result = ImageShop::getInstance()->sync->run($this->inline);
 
         if ($result['status'] === 'failed') {
-            $this->stderr("Could not reach the Imageshop API. Nothing was changed and the sync window was not advanced.\n", Console::FG_RED);
+            $this->stderr("The Imageshop API request failed (see the Craft logs). Nothing was changed and the sync window was not advanced.\n", Console::FG_RED);
             return ExitCode::UNAVAILABLE;
         }
 
@@ -104,8 +104,8 @@ class SyncController extends Controller
         $labels = [
             'success' => 'success',
             'no_changes' => 'no changes',
-            'partial' => 'partial (API errors, will retry)',
-            'failed' => 'failed (API unreachable)',
+            'partial' => 'partial (some requests or saves failed, will retry)',
+            'failed' => 'failed (API request failed)',
         ];
 
         foreach ($log as $row) {

@@ -53,7 +53,7 @@
                         {% elseif entry.status == 'partial' %}
                             <span class="status orange"></span> {{ 'Partial, will retry'|t('imageshop-dam') }}
                         {% elseif entry.status == 'failed' %}
-                            <span class="status red"></span> {{ 'Failed, API unreachable'|t('imageshop-dam') }}
+                            <span class="status red"></span> {{ 'Failed, API error'|t('imageshop-dam') }}
                         {% else %}
                             <span class="status light"></span> {{ 'No changes'|t('imageshop-dam') }}
                         {% endif %}
