@@ -142,7 +142,7 @@ class ImageShop extends Component
      * @param string $language Requested language
      * @return ?array document data
      **/
-    public function getDocumentById(int $documentId, string $language): ?array
+    public function getDocumentById(int $documentId, string $language): array|false|null
     {
         if (!$documentId) {
             return null;
@@ -157,7 +157,13 @@ class ImageShop extends Component
             ]
         ]);
 
-        if (!Json::isJsonObject($response)) {
+        // false: the request itself failed (outage, HTTP error). The sync
+        // treats that differently from null, which means "no such document".
+        if ($response === false) {
+            return false;
+        }
+
+        if (!is_string($response) || !Json::isJsonObject($response)) {
             return null;
         }
 
@@ -240,32 +246,45 @@ class ImageShop extends Component
 
     /**
      * Returns the ids of documents Imageshop reports as changed since the
-     * last sync run.
+     * last successful sync run, or null when the API could not be asked.
      *
-     * @return int[]
+     * The distinction matters: an empty array is a genuine "nothing changed"
+     * and lets the sync window advance; null must leave it where it is.
+     *
+     * @return int[]|null
      **/
-    public function getRecentlyUpdatedDocumentIds(): array
+    public function getRecentlyUpdatedDocumentIds(): ?array
     {
-        $lastUpdate = $this->_getDateLastUpdated();
+        $lastUpdate = $this->getDateLastUpdated();
         $response = $this->_request('GET','/Document/GetAllDocumentIdsChangedAfter',[
             'query' => [
                 'changed' => $lastUpdate
                 ]
             ]);
+
+        if (!is_string($response)) {
+            return null;
+        }
+
         $ids = Json::decodeIfJson($response);
 
-        return is_array($ids) ? array_map('intval', $ids) : [];
+        return is_array($ids) ? array_map('intval', $ids) : null;
     }
 
     /**
-     * Queues sync jobs for every element referencing a cached document.
+     * Queues sync jobs for every element referencing the latest run's cache.
      *
      * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->queueSyncJobs()`.
      * @return int Number of queue jobs created
      **/
     public function updateImages(): int
     {
-        return Plugin::getInstance()->sync->queueSyncJobs();
+        $runId = $this->getLatestSyncRunId();
+        if (!$runId) {
+            return 0;
+        }
+
+        return Plugin::getInstance()->sync->queueSyncJobs($this->getDocumentCache($runId), $runId);
     }
 
     /**
@@ -395,10 +414,14 @@ class ImageShop extends Component
     {
         $settings = Plugin::$plugin->getSettings();
 
+        // Every code returned here is canonicalized so it matches the keys
+        // used in the stored `text` / `overrides` blocks and the keys an
+        // explicit getter argument is normalized to. A mapping of `en-US`
+        // would otherwise write overrides under one key and read another.
         if ($site) {
             $mapped = $settings->siteLanguages[$site->handle] ?? null;
             if (is_string($mapped) && $mapped !== '') {
-                return $mapped;
+                return $this->sanitizeLanguage($mapped) ?: $mapped;
             }
             $sanitized = $this->sanitizeLanguage($site->language);
             if ($sanitized) {
@@ -406,69 +429,119 @@ class ImageShop extends Component
             }
         }
 
-        return $settings->language;
+        $fallback = (string)$settings->language;
+
+        return $this->sanitizeLanguage($fallback) ?: $fallback;
     }
 
     /**
-     * Gets the recently updated document cache from the db
+     * How many sync run snapshots to keep. Queued jobs read the snapshot of
+     * the run that created them, so this only needs to outlast a queue backlog.
+     */
+    private const SYNC_RUNS_TO_KEEP = 20;
+
+    /**
+     * Returns the document cache of one sync run, or of the latest run.
      *
-     * @return array The document cache
+     * Each run stores its own snapshot (one row in `imageshop-dam_sync`), so
+     * jobs still waiting in the queue keep reading the data they were queued
+     * for even after a later run has fetched something else.
+     *
+     * @param int|null $runId The run to read, or null for the most recent one
+     * @return array [documentId => [lang => apiDoc]]
      **/
-    public function getDocumentCache(): array
+    public function getDocumentCache(?int $runId = null): array
     {
         $query = (new Query())
             ->select('documentCache')
-            ->from('{{%imageshop-dam_sync}}')
-            ->orderBy(['lastUpdated' => SORT_DESC])
-            ->one();
+            ->from('{{%imageshop-dam_sync}}');
 
-        if (empty($query)) {
+        if ($runId !== null) {
+            $query->where(['id' => $runId]);
+        } else {
+            $query->orderBy(['id' => SORT_DESC]);
+        }
+
+        $row = $query->one();
+
+        if (empty($row)) {
             return [];
         }
 
-        $decoded = Json::decodeIfJson($query['documentCache']);
+        $decoded = Json::decodeIfJson($row['documentCache']);
 
         return is_array($decoded) ? $decoded : [];
     }
 
     /**
-     * Writes the document cache to the db and bumps the last-synced timestamp.
+     * Stores a sync run's document cache as a new snapshot and returns the run id.
      *
-     * @param array $documentCache The new document data
-     * @return bool
+     * `$lastUpdated` is the sync watermark this run vouches for: the next run
+     * asks Imageshop for documents changed after the newest watermark on
+     * record. Pass the previous watermark to store a partial result without
+     * advancing the window.
+     *
+     * @param array $documentCache [documentId => [lang => apiDoc]]
+     * @param string|null $lastUpdated DB-formatted timestamp, or null for now
+     * @return int The run id
      **/
-    public function setDocumentCache(array $documentCache): bool
+    public function setDocumentCache(array $documentCache, ?string $lastUpdated = null): int
     {
-        $lastUpdate = Db::prepareDateForDb(new \DateTime());
-        Craft::$app->getDb()
-            ->createCommand()
-            ->upsert('{{%imageshop-dam_sync}}', [
-                'id' => 1,
-                'lastUpdated' => $lastUpdate,
-                'documentCache' => Json::encode($documentCache)
-            ], [
-                'lastUpdated' => $lastUpdate,
-                'documentCache' => Json::encode($documentCache)
+        $db = Craft::$app->getDb();
+        $table = '{{%imageshop-dam_sync}}';
+
+        $db->createCommand()
+            ->insert($table, [
+                'lastUpdated' => $lastUpdated ?? Db::prepareDateForDb(new \DateTime()),
+                'documentCache' => Json::encode($documentCache),
             ])
             ->execute();
 
-        return true;
+        $runId = (int)$db->getLastInsertID($table);
+
+        $cutoffId = (new Query())
+            ->select('id')
+            ->from($table)
+            ->orderBy(['id' => SORT_DESC])
+            ->offset(self::SYNC_RUNS_TO_KEEP)
+            ->limit(1)
+            ->scalar();
+
+        if ($cutoffId) {
+            $db->createCommand()->delete($table, ['<=', 'id', $cutoffId])->execute();
+        }
+
+        return $runId;
     }
 
     /**
-     * Gets the last time the update was ran
-     *
-     * @return string The lastest date updated
+     * Returns the id of the most recent sync run, if any.
      **/
-    private function _getDateLastUpdated(): string
+    public function getLatestSyncRunId(): ?int
     {
-        $query = (new Query())
-            ->select('lastUpdated')
+        $id = (new Query())
+            ->select('id')
             ->from('{{%imageshop-dam_sync}}')
-            ->orderBy(['lastUpdated' => SORT_DESC])
-            ->one();
+            ->orderBy(['id' => SORT_DESC])
+            ->scalar();
 
-        return $query['lastUpdated'] ?? '2000-01-01 00:00:00';
+        return $id ? (int)$id : null;
+    }
+
+    /**
+     * Returns the sync watermark: the newest timestamp any run has vouched
+     * for. The next run asks Imageshop for documents changed after it.
+     *
+     * @return string DB-formatted timestamp
+     **/
+    public function getDateLastUpdated(): string
+    {
+        $latest = (new Query())
+            ->select(['max' => 'MAX([[lastUpdated]])'])
+            ->from('{{%imageshop-dam_sync}}')
+            ->scalar();
+
+        return $latest ?: '2000-01-01 00:00:00';
     }
 
     /**
@@ -728,15 +801,25 @@ class ImageShop extends Component
         try {
             $response = $client->request($method, $action, $params);
         } catch (GuzzleException $e) {
+            // Transport failure or HTTP error: the caller must be able to tell
+            // this apart from "nothing there", or a sync run during an outage
+            // would be recorded as a successful empty one.
             Craft::error('Imageshop API request failed: ' . $e->getMessage(), __METHOD__);
-            return null;
+            return false;
         }
 
-        if ($response->getStatusCode() == 200) {
+        $status = $response->getStatusCode();
+
+        if ($status == 200) {
             return $response->getBody()->getContents();
         }
 
-        return null;
+        if ($status == 404) {
+            return null;
+        }
+
+        Craft::error("Imageshop API request to {$action} returned HTTP {$status}", __METHOD__);
+        return false;
     }
 
 }

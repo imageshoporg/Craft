@@ -57,6 +57,15 @@ class SyncController extends Controller
 
         $result = ImageShop::getInstance()->sync->run($this->inline);
 
+        if ($result['status'] === 'failed') {
+            $this->stderr("Could not reach the Imageshop API. Nothing was changed and the sync window was not advanced.\n", Console::FG_RED);
+            return ExitCode::UNAVAILABLE;
+        }
+
+        if ($result['status'] === 'partial') {
+            $this->stdout("Some document requests failed. The fetched documents were applied; the sync window was not advanced, so the rest are retried next run.\n", Console::FG_YELLOW);
+        }
+
         $this->stdout("Documents changed: ", Console::FG_YELLOW);
         $this->stdout("{$result['documentsChanged']}\n");
 
@@ -90,8 +99,15 @@ class SyncController extends Controller
             return ExitCode::OK;
         }
 
+        $labels = [
+            'success' => 'success',
+            'no_changes' => 'no changes',
+            'partial' => 'partial (API errors, will retry)',
+            'failed' => 'failed (API unreachable)',
+        ];
+
         foreach ($log as $row) {
-            $status = $row['status'] === 'success' ? 'success' : 'no changes';
+            $status = $labels[$row['status']] ?? $row['status'];
             $this->stdout("{$row['dateCreated']}  ", Console::FG_YELLOW);
             $this->stdout("documents: {$row['documentsChanged']}  elements: {$row['jobsQueued']}  {$status}\n");
         }

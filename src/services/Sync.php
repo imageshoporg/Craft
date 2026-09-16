@@ -13,6 +13,7 @@ namespace Imageshop\Imageshop\services;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\helpers\Db;
 use Imageshop\Imageshop\fields\ImageShopField;
 use Imageshop\Imageshop\ImageShop as Plugin;
 use Imageshop\Imageshop\jobs\Sync as SyncJob;
@@ -32,6 +33,15 @@ use Imageshop\Imageshop\models\ImageShop as ImageModel;
  * Matrix block), updates the search index and fires `afterSave` events for
  * other plugins. `resaving` is set on each element so `dateUpdated` is left
  * alone, the same way Craft's own "Resave elements" behaves.
+ *
+ * Reliability rules:
+ *  - The sync watermark only advances after Imageshop has actually answered.
+ *    An outage is logged as `failed` and changes it nothing.
+ *  - Each run stores its own document snapshot and queued jobs read the
+ *    snapshot of the run that created them, so a later run cannot make
+ *    queued jobs skip documents.
+ *  - If some document requests fail, what was fetched is applied but the
+ *    watermark is kept, so the rest is retried next run (`partial`).
  *
  * Local alt text / description overrides live in the image JSON's `overrides`
  * block and are never written by the sync; see `mapDocumentFields()`.
@@ -74,7 +84,13 @@ class Sync extends Component
 
     /**
      * Yields every element/site combination that holds an Imageshop field
-     * value, optionally limited to values referencing the given document ids.
+     * value matching the filters.
+     *
+     * A value is included when its document id is in `$documentIds` (null
+     * means every document), or when `$requiredLanguages` is given and the
+     * value's `text` block lacks one of those languages. The second filter is
+     * how a Craft site added after an image was picked gets its text: the
+     * document does not need to have changed in Imageshop.
      *
      * Drafts and provisional drafts are included so a draft applied after a
      * sync cannot reintroduce stale metadata. Revisions are immutable history
@@ -84,12 +100,14 @@ class Sync extends Component
      * `['elementType' => string, 'elementId' => int, 'siteId' => int,
      *   'fields' => [handle => [documentId, ...]], 'languages' => [lang, ...]]`
      *
-     * @param int[]|null $documentIds Limit to usages of these documents, or null for all
+     * @param int[]|null $documentIds Documents to match, or null for all
+     * @param string[]|null $requiredLanguages Languages every value should have a text block for
      * @return \Generator<array>
      */
-    public function findUsages(?array $documentIds = null): \Generator
+    public function findUsages(?array $documentIds = null, ?array $requiredLanguages = null): \Generator
     {
         $wanted = $documentIds !== null ? array_flip(array_map('intval', $documentIds)) : null;
+        $required = $requiredLanguages !== null ? array_values(array_unique(array_filter($requiredLanguages))) : [];
 
         foreach ($this->getImageshopFieldLayouts() as $elementType => $layouts) {
             if (!class_exists($elementType) || !is_subclass_of($elementType, ElementInterface::class)) {
@@ -126,15 +144,30 @@ class Sync extends Component
                         if (!$model instanceof ImageModel) {
                             continue;
                         }
+
                         $id = (int)$model->getDocumentId();
-                        if ($id && ($wanted === null || isset($wanted[$id]))) {
-                            $ids[$id] = true;
+                        if (!$id) {
+                            continue;
                         }
+
                         $json = $model->getJson();
-                        if (is_array($json) && isset($json['text']) && is_array($json['text'])) {
-                            foreach (array_keys($json['text']) as $lang) {
-                                $languages[(string)$lang] = true;
+                        $text = is_array($json) && isset($json['text']) && is_array($json['text']) ? $json['text'] : [];
+                        foreach (array_keys($text) as $lang) {
+                            $languages[(string)$lang] = true;
+                        }
+
+                        $include = $wanted === null || isset($wanted[$id]);
+                        if (!$include && !empty($required)) {
+                            foreach ($required as $lang) {
+                                if (!isset($text[$lang])) {
+                                    $include = true;
+                                    break;
+                                }
                             }
+                        }
+
+                        if ($include) {
+                            $ids[$id] = true;
                         }
                     }
 
@@ -159,75 +192,106 @@ class Sync extends Component
     }
 
     /**
-     * Asks Imageshop which documents changed since the last run, fetches the
-     * latest metadata for the ones that are actually in use, and stores it in
-     * the document cache.
+     * The Imageshop language code of every Craft site, deduplicated.
+     *
+     * @return string[]
+     */
+    public function getSiteLanguages(): array
+    {
+        $service = Plugin::getInstance()->service;
+        $languages = [];
+
+        foreach (Craft::$app->getSites()->getAllSites() as $site) {
+            $lang = $service->getImageshopLanguageForSite($site);
+            if ($lang) {
+                $languages[$lang] = true;
+            }
+        }
+
+        return array_keys($languages);
+    }
+
+    /**
+     * Asks Imageshop which documents changed since the last successful run,
+     * fetches the latest metadata for the ones in use (plus any in-use
+     * document missing a text block for a site language), and stores the
+     * result as a new run snapshot.
      *
      * Metadata is fetched once per language, where the language set is the
      * union of the languages already present in the affected values and the
-     * Imageshop language of every Craft site. That lets a site added after an
-     * image was picked receive its text block on the next sync.
+     * Imageshop language of every Craft site.
      *
-     * @return array The new document cache: [documentId => [lang => apiDoc]]
+     * Returns `runId` (null when nothing was stored), the fetched `cache`,
+     * a `status` of `ok`, `partial` (some document requests failed; the
+     * watermark was not advanced) or `failed` (Imageshop could not be asked
+     * at all; nothing was stored), and the number of `failures`.
+     *
+     * @return array{runId: ?int, cache: array, status: string, failures: int}
      */
     public function updateRecentlyUpdatedCache(): array
     {
         $service = Plugin::getInstance()->service;
-        $changed = array_map('intval', $service->getRecentlyUpdatedDocumentIds());
-        $cache = [];
 
-        if (!empty($changed)) {
-            $inUse = [];
-            $languages = [];
+        // Take the watermark before asking, so a document that changes while
+        // this run is fetching is reported to the next run instead of lost.
+        $previousWatermark = $service->getDateLastUpdated();
+        $watermark = Db::prepareDateForDb(new \DateTime());
 
-            foreach ($this->findUsages($changed) as $usage) {
-                foreach ($usage['fields'] as $ids) {
-                    foreach ($ids as $id) {
-                        $inUse[$id] = true;
-                    }
-                }
-                foreach ($usage['languages'] as $lang) {
-                    $languages[$lang] = true;
+        $changed = $service->getRecentlyUpdatedDocumentIds();
+        if ($changed === null) {
+            return ['runId' => null, 'cache' => [], 'status' => 'failed', 'failures' => 1];
+        }
+
+        $siteLanguages = $this->getSiteLanguages();
+        $inUse = [];
+        $languages = array_fill_keys($siteLanguages, true);
+
+        foreach ($this->findUsages($changed, $siteLanguages) as $usage) {
+            foreach ($usage['fields'] as $ids) {
+                foreach ($ids as $id) {
+                    $inUse[$id] = true;
                 }
             }
+            foreach ($usage['languages'] as $lang) {
+                $languages[$lang] = true;
+            }
+        }
 
-            if (!empty($inUse)) {
-                foreach (Craft::$app->getSites()->getAllSites() as $site) {
-                    $lang = $service->getImageshopLanguageForSite($site);
-                    if ($lang) {
-                        $languages[$lang] = true;
-                    }
-                }
+        $cache = [];
+        $failures = 0;
 
-                foreach (array_keys($inUse) as $documentId) {
-                    foreach (array_keys($languages) as $lang) {
-                        $doc = $service->getDocumentById($documentId, $lang);
-                        if ($doc) {
-                            $cache[$documentId][$service->sanitizeLanguage($lang)] = $doc;
-                        }
-                    }
+        foreach (array_keys($inUse) as $documentId) {
+            foreach (array_keys($languages) as $lang) {
+                $doc = $service->getDocumentById($documentId, $lang);
+                if ($doc === false) {
+                    $failures++;
+                } elseif ($doc) {
+                    $cache[$documentId][$service->sanitizeLanguage($lang)] = $doc;
                 }
             }
         }
 
-        // Always write the cache and bump the timestamp, even when empty, so
-        // the next run only asks for documents changed after this one.
-        $service->setDocumentCache($cache);
+        $status = $failures > 0 ? 'partial' : 'ok';
 
-        return $cache;
+        // A partial run keeps the previous watermark so everything since then
+        // is asked for again next time; only a clean run advances it.
+        $runId = $service->setDocumentCache($cache, $status === 'partial' ? $previousWatermark : $watermark);
+
+        return ['runId' => $runId, 'cache' => $cache, 'status' => $status, 'failures' => $failures];
     }
 
     /**
      * Queues one job per element/site combination that references a document
-     * in the cache.
+     * in the given run's cache. Jobs carry the run id and read that run's
+     * snapshot when they execute.
      *
-     * @param array|null $documentCache The cache to use, or null to load the stored one
+     * @param array $documentCache The run's cache
+     * @param int $runId The run the cache belongs to
      * @return int Number of jobs queued
      */
-    public function queueSyncJobs(?array $documentCache = null): int
+    public function queueSyncJobs(array $documentCache, int $runId): int
     {
-        $documentCache ??= Plugin::getInstance()->service->getDocumentCache();
-        if (empty($documentCache)) {
+        if (empty($documentCache) || !$runId) {
             return 0;
         }
 
@@ -236,6 +300,7 @@ class Sync extends Component
 
         foreach ($usages as $i => $usage) {
             Craft::$app->getQueue()->ttr(3600)->push(new SyncJob([
+                'runId' => $runId,
                 'elementType' => $usage['elementType'],
                 'elementId' => $usage['elementId'],
                 'siteId' => $usage['siteId'],
@@ -249,14 +314,14 @@ class Sync extends Component
     }
 
     /**
-     * Applies the document cache to one element in one site and saves it
+     * Applies a document cache to one element in one site and saves it
      * through the element lifecycle.
      *
      * @param string $elementType Element class
      * @param int $elementId
      * @param int $siteId
      * @param string[] $fieldHandles Imageshop field handles on the element
-     * @param array|null $documentCache The cache to use, or null to load the stored one
+     * @param array|null $documentCache The cache to apply, or null for the latest run's
      * @return bool Whether the element was changed and saved
      */
     public function syncElement(string $elementType, int $elementId, int $siteId, array $fieldHandles, ?array $documentCache = null): bool
@@ -337,14 +402,34 @@ class Sync extends Component
      * Runs a full sync: fetch changed documents, then either queue one job per
      * affected element/site or process them immediately. The run is logged.
      *
+     * `status` is `success`, `no_changes`, `partial` (applied what could be
+     * fetched, will retry the rest) or `failed` (Imageshop unreachable,
+     * nothing changed).
+     *
      * @param bool $inline Process elements now instead of queueing jobs
-     * @return array{documentsChanged: int, elements: int, inline: bool, status: string, details: array}
+     * @return array{runId: ?int, documentsChanged: int, elements: int, inline: bool, status: string, details: array}
      */
     public function run(bool $inline = false): array
     {
         $service = Plugin::getInstance()->service;
 
-        $cache = $this->updateRecentlyUpdatedCache();
+        $fetch = $this->updateRecentlyUpdatedCache();
+
+        if ($fetch['status'] === 'failed') {
+            $service->logSync(0, 0, 'failed', []);
+
+            return [
+                'runId' => null,
+                'documentsChanged' => 0,
+                'elements' => 0,
+                'inline' => $inline,
+                'status' => 'failed',
+                'details' => [],
+            ];
+        }
+
+        $cache = $fetch['cache'];
+        $runId = $fetch['runId'];
         $documentsChanged = count($cache);
         $details = $service->buildSyncDetails($cache);
 
@@ -359,13 +444,19 @@ class Sync extends Component
                 }
             }
         } else {
-            $elements = $this->queueSyncJobs($cache);
+            $elements = $this->queueSyncJobs($cache, $runId);
         }
 
-        $status = $elements > 0 ? 'success' : 'no_changes';
+        if ($fetch['status'] === 'partial') {
+            $status = 'partial';
+        } else {
+            $status = $elements > 0 ? 'success' : 'no_changes';
+        }
+
         $service->logSync($documentsChanged, $elements, $status, $details);
 
         return [
+            'runId' => $runId,
             'documentsChanged' => $documentsChanged,
             'elements' => $elements,
             'inline' => $inline,

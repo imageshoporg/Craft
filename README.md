@@ -379,8 +379,10 @@ Each sync run is logged and displayed in a **Sync history** table directly on th
 |--------|-------------|
 | Date | When the sync was triggered |
 | Documents changed | Number of documents fetched from the API |
-| Jobs queued | Number of element/site combinations queued (or updated, for `--inline` runs) |
-| Status | **Success** (elements were updated) or **No changes** (nothing to update) |
+| Elements | Number of element/site combinations queued (or updated, for `--inline` runs) |
+| Status | **Success**, **No changes**, **Partial** (some document requests failed; the run is retried from the same point next time) or **Failed** (the API was unreachable; nothing was changed) |
+
+A run that cannot reach the API does not advance the sync window, so documents changed during an outage are picked up by the next successful run. Each run stores its own snapshot of fetched metadata, and queued jobs read the snapshot of the run that created them, so starting another sync while jobs are still queued cannot make them skip documents.
 
 The log keeps the most recent 20 entries and prunes older ones automatically.
 

@@ -125,9 +125,15 @@ class ImageShop extends Model implements Serializable
         return null;
     }
 
+    /**
+     * Sets the language used by the getters when no explicit language is
+     * passed. The code is canonicalized the same way an explicit argument is,
+     * so `text` and `overrides` keys are always looked up under one form
+     * (`nb-NO` and `no` both resolve to `no`).
+     */
     public function setSiteLanguage(string $lang): void
     {
-        $this->_siteLanguage = $lang;
+        $this->_siteLanguage = Plugin::getInstance()->service->sanitizeLanguage($lang) ?: $lang;
     }
 
     protected function getLang($lang = null): ?string

@@ -31,7 +31,7 @@
             <tr>
                 <th>{{ 'Date'|t('imageshop-dam') }}</th>
                 <th>{{ 'Documents changed'|t('imageshop-dam') }}</th>
-                <th>{{ 'Jobs queued'|t('imageshop-dam') }}</th>
+                <th>{{ 'Elements'|t('imageshop-dam') }}</th>
                 <th>{{ 'Status'|t('imageshop-dam') }}</th>
             </tr>
         </thead>
@@ -50,6 +50,10 @@
                     <td>
                         {% if entry.status == 'success' %}
                             <span class="status green"></span> {{ 'Success'|t('imageshop-dam') }}
+                        {% elseif entry.status == 'partial' %}
+                            <span class="status orange"></span> {{ 'Partial, will retry'|t('imageshop-dam') }}
+                        {% elseif entry.status == 'failed' %}
+                            <span class="status red"></span> {{ 'Failed, API unreachable'|t('imageshop-dam') }}
                         {% else %}
                             <span class="status light"></span> {{ 'No changes'|t('imageshop-dam') }}
                         {% endif %}

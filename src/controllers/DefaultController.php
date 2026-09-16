@@ -21,7 +21,11 @@ class DefaultController extends Controller
 
         $result = ImageShop::getInstance()->sync->run(false);
 
-        if ($result['elements'] > 0) {
+        if ($result['status'] === 'failed') {
+            Craft::$app->getSession()->setError(
+                Craft::t('imageshop-dam', 'Could not reach the Imageshop API. Nothing was changed; try again later.')
+            );
+        } elseif ($result['elements'] > 0) {
             Craft::$app->getSession()->setNotice(
                 Craft::t('imageshop-dam', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
                     'count' => $result['elements'],
