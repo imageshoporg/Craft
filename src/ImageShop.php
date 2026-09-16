@@ -19,6 +19,7 @@ use craft\services\Utilities;
 use Imageshop\Imageshop\fields\ImageShopField;
 use Imageshop\Imageshop\models\Settings;
 use Imageshop\Imageshop\services\ImageShop as Service;
+use Imageshop\Imageshop\services\Sync as SyncService;
 use Imageshop\Imageshop\utilities\ImageShop as UtilitiesImageShop;
 use yii\base\Event;
 
@@ -29,7 +30,8 @@ use yii\base\Event;
  * @package   Imageshop
  * @since     2.0.0
  *
- * @property  ImageShopServiceService $imageShopService
+ * @property-read Service $service API client, permalinks and document cache
+ * @property-read SyncService $sync Metadata sync engine
  */
 class ImageShop extends Plugin
 {
@@ -55,6 +57,7 @@ class ImageShop extends Plugin
         return [
             'components' => [
                 'service' => Service::class,
+                'sync' => SyncService::class,
             ],
         ];
     }
@@ -63,9 +66,10 @@ class ImageShop extends Plugin
     {
         parent::init();
         self::$plugin = $this;
-            
+
         $this->setComponents([
             'service' => Service::class,
+            'sync' => SyncService::class,
         ]);
 
         Event::on(

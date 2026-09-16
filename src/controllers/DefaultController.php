@@ -10,36 +10,21 @@ use Imageshop\Imageshop\ImageShop;
 
 class DefaultController extends Controller
 {
+    /**
+     * Fetches changed documents from Imageshop and queues one sync job per
+     * affected element/site. Triggered by the Utilities → Imageshop button.
+     */
     public function actionCreateSyncJobs(): ?Response
     {
         $this->requirePostRequest();
         $this->requirePermission('utility:imageshop-dam');
 
-        $service = ImageShop::getInstance()->service;
+        $result = ImageShop::getInstance()->sync->run(false);
 
-        // Phase 1: Fetch recently changed documents from the ImageShop API and cache them
-        $service->updateRecentlyUpdatedCache();
-
-        // Count how many documents were cached and build details
-        $documentCache = $service->getDocumentCache();
-        $documentsChanged = count($documentCache);
-        $details = $service->buildSyncDetails($documentCache);
-
-        // Phase 2: Create queue jobs to update content rows from the cache
-        $jobCount = $service->updateImages();
-
-        // Log the sync run
-        $service->logSync(
-            $documentsChanged,
-            $jobCount,
-            $jobCount > 0 ? 'success' : 'no_changes',
-            $details
-        );
-
-        if ($jobCount > 0) {
+        if ($result['elements'] > 0) {
             Craft::$app->getSession()->setNotice(
                 Craft::t('imageshop-dam', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
-                    'count' => $jobCount,
+                    'count' => $result['elements'],
                 ])
             );
         } else {

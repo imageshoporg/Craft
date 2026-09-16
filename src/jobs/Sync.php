@@ -4,19 +4,20 @@ namespace Imageshop\Imageshop\jobs;
 
 use Craft;
 use craft\queue\BaseJob;
-use craft\helpers\Json;
 use Imageshop\Imageshop\ImageShop;
 
 /**
- * Syncs the details of documents from the recently updated cache to all the
- * content rows in the db that contain imageshop assets
+ * Applies the recently-updated document cache to one element in one site,
+ * saving it through the element lifecycle so caches and the search index
+ * are refreshed.
  */
 class Sync extends BaseJob
 {
-    public string $rowId = '';
-    public string $rowUid = '';
-    public string $documentIds = '';
-    public string $fields = '';
+    public string $elementType = '';
+    public int $elementId = 0;
+    public int $siteId = 0;
+    /** @var string[] */
+    public array $fieldHandles = [];
     public int $index = 0;
     public int $count = 0;
 
@@ -24,12 +25,16 @@ class Sync extends BaseJob
     {
         $this->setProgress($queue, $this->index / max($this->count, 1));
 
-        ImageShop::getInstance()->service->updateContentRow([
-            'rowId' => $this->rowId,
-            'rowUid' => $this->rowUid,
-            'documentIds' => Json::decode($this->documentIds),
-            'fields' => Json::decode($this->fields),
-        ]);
+        if ($this->elementType === '' || !$this->elementId || !$this->siteId) {
+            return;
+        }
+
+        ImageShop::getInstance()->sync->syncElement(
+            $this->elementType,
+            $this->elementId,
+            $this->siteId,
+            $this->fieldHandles
+        );
     }
 
     protected function defaultDescription(): ?string

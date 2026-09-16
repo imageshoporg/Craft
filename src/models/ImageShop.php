@@ -159,7 +159,19 @@ class ImageShop extends Model implements Serializable
         return $this->getTextInfo("title", $lang);
     }
 
+    /**
+     * The description for the given language: the local override if an editor
+     * entered one in Craft, otherwise the text synced from Imageshop.
+     */
     public function getDescription($lang = null): ?string
+    {
+        return $this->getOverride('description', $lang) ?? $this->getTextInfo("description", $lang);
+    }
+
+    /**
+     * The description as synced from Imageshop, ignoring any local override.
+     */
+    public function getSyncedDescription($lang = null): ?string
     {
         return $this->getTextInfo("description", $lang);
     }
@@ -174,9 +186,62 @@ class ImageShop extends Model implements Serializable
         return $this->getTextInfo("credits", $lang);
     }
 
+    /**
+     * The alt text for the given language: the local override if an editor
+     * entered one in Craft, otherwise the text synced from Imageshop.
+     */
     public function getAltText($lang = null): ?string
     {
+        return $this->getOverride('altText', $lang) ?? $this->getTextInfo("altText", $lang);
+    }
+
+    /**
+     * The alt text as synced from Imageshop, ignoring any local override.
+     */
+    public function getSyncedAltText($lang = null): ?string
+    {
         return $this->getTextInfo("altText", $lang);
+    }
+
+    /**
+     * Returns a local override entered in Craft, or null when there is none.
+     *
+     * Overrides live in the image JSON's `overrides` block, separate from the
+     * `text` block the sync writes, so a sync can never destroy them. An
+     * empty string counts as "no override": clearing the field in the CP
+     * falls back to the synced text.
+     *
+     * @param string $key `altText` or `description`
+     * @param string|null $lang Language code, or null for the site language
+     */
+    public function getOverride(string $key, $lang = null): ?string
+    {
+        $lang = $this->getLang($lang);
+        $value = $this->_json['overrides'][$lang][$key] ?? null;
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Whether an editor has entered a local override for the given key and language.
+     */
+    public function hasOverride(string $key, $lang = null): bool
+    {
+        return $this->getOverride($key, $lang) !== null;
+    }
+
+    /**
+     * All local overrides, keyed by language: [lang => [key => value]].
+     */
+    public function getOverrides(): array
+    {
+        $overrides = $this->_json['overrides'] ?? [];
+
+        return is_array($overrides) ? $overrides : [];
     }
 
     protected function getTextInfo($key, $lang = null): ?string

@@ -51,13 +51,26 @@ return [
     'Remove image' => 'Fjern bilde',
     'Alternative text' => 'Alternativ tekst',
     'Description' => 'Beskrivelse',
+    'Leave a field empty to use the text from Imageshop. Text entered here is kept when metadata is synced.' => 'La et felt stå tomt for å bruke teksten fra Imageshop. Tekst du skriver inn her beholdes når metadata synkroniseres.',
 
     // Utility
     'Imageshop' => 'Imageshop',
     'Imageshop DAM' => 'Imageshop DAM',
-    'When you press this button, Imageshop will update all metadata transferred to Craft from Imageshop, such as alternative text.' => 'Når du trykker på denne knappen, vil Imageshop oppdatere all metadata overført til Craft fra Imageshop, som alternativ tekst.',
-    'Important: This action cannot be undone.' => 'Viktig: Denne handlingen kan ikke angres.',
+    'This will fetch the latest metadata from the Imageshop API and update all Imageshop fields in Craft, including alternative text, descriptions, credits, rights, tags and titles. Elements are saved through Craft, so caches and the search index are refreshed.' => 'Dette henter siste metadata fra Imageshop-API-et og oppdaterer alle Imageshop-felt i Craft, inkludert alternativ tekst, beskrivelser, kreditering, rettigheter, emneord og titler. Elementene lagres gjennom Craft, så cache og søkeindeks oppdateres.',
+    'Alternative text and descriptions entered in Craft are kept as local overrides and are not overwritten.' => 'Alternativ tekst og beskrivelser skrevet inn i Craft beholdes som lokale overstyringer og blir ikke overskrevet.',
+    'To keep metadata in sync automatically, schedule `php craft imageshop-dam/sync/run --inline` with cron.' => 'For å holde metadata synkronisert automatisk, kjør `php craft imageshop-dam/sync/run --inline` fra cron.',
     'Sync metadata' => 'Synkroniser metadata',
+    'Sync history' => 'Synkroniseringshistorikk',
+    'No syncs have been run yet.' => 'Ingen synkroniseringer er kjørt ennå.',
+    'Date' => 'Dato',
+    'Documents changed' => 'Dokumenter endret',
+    'Jobs queued' => 'Elementer oppdatert',
+    'Status' => 'Status',
+    'Success' => 'Vellykket',
+    'No changes' => 'Ingen endringer',
+    'Document' => 'Dokument',
+    'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.' => 'La {count} synkroniseringsjobb{count, plural, =1{} other{er}} i køen. Følg med i køen for fremdrift.',
+    'No changes found. All metadata is up to date.' => 'Ingen endringer funnet. All metadata er oppdatert.',
 
     // Queue jobs
     'Re-syncing imageshop data {index} of {count}' => 'Synkroniserer imageshop-data {index} av {count}',

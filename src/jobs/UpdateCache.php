@@ -7,14 +7,14 @@ use craft\queue\BaseJob;
 use Imageshop\Imageshop\ImageShop;
 
 /**
- * Gets all the data of documents that have chagned since the last time the scan 
- * was run, and saves them in the db in a dump.
+ * Fetches the metadata of every in-use document that changed in Imageshop
+ * since the last sync, and stores it in the document cache.
  */
 class UpdateCache extends BaseJob
 {
     public function execute($queue): void
     {
-        ImageShop::getInstance()->service->updateRecentlyUpdatedCache();
+        ImageShop::getInstance()->sync->updateRecentlyUpdatedCache();
     }
 
     protected function defaultDescription(): ?string

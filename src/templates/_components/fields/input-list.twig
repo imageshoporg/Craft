@@ -1,4 +1,6 @@
 {% for image in images %}
+    {% set syncedAlt = image.getSyncedAltText(language) %}
+    {% set syncedDescription = image.getSyncedDescription(language) %}
     <div class="imageshop-img-container" data-imageshop-image-wrapper>
         <a class="move icon imageshop-img-container__reorder imageshop-img-container-icon" title="{{ 'Reorder'|t('imageshop-dam') }}" aria-label="{{ 'Reorder'|t('imageshop-dam') }}" role="button">&nbsp;</a>
         <span data-imageshop-trigger-settings data-icon="settings" class="imageshop-img-container__settings imageshop-img-container-icon" title="{{ 'Show settings'|t('imageshop-dam') }}"></span>
@@ -15,18 +17,26 @@
         </div>
         <div data-imageshop-alt-wrapper hidden>
 
+        <p class="light smalltext imageshop-img-container__hint">{{ 'Leave a field empty to use the text from Imageshop. Text entered here is kept when metadata is synced.'|t('imageshop-dam') }}</p>
+
         <div class="imageshop-img-container__alt">
             <div class="imageshop-img-container__alt-top">
                 <label for="alt-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Alternative text'|t('imageshop-dam') }} - {{ language }}:</label>
             </div>
-            <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="6" data-alt-text>{{ image.getAltText(language) }}</textarea>
+            <textarea name="alt-{{ image.code }}" class="text fullwidth" rows="6" placeholder="{{ syncedAlt }}" data-alt-text>{{ image.getOverride('altText', language) }}</textarea>
+            {% if syncedAlt and image.hasOverride('altText', language) %}
+                <div class="light smalltext imageshop-img-container__synced">{{ 'Imageshop'|t('imageshop-dam') }}: {{ syncedAlt }}</div>
+            {% endif %}
         </div>
 
         <div class="imageshop-img-container__alt">
             <div class="imageshop-img-container__alt-top">
                 <label for="description-{{ image.code }}" class="label imageshop-img-container__alt-label">{{ 'Description'|t('imageshop-dam') }} - {{ language }}:</label>
             </div>
-            <textarea name="description-{{ image.code }}" class="text fullwidth" rows="6" data-description-text>{{ image.getDescription(language) }}</textarea>
+            <textarea name="description-{{ image.code }}" class="text fullwidth" rows="6" placeholder="{{ syncedDescription }}" data-description-text>{{ image.getOverride('description', language) }}</textarea>
+            {% if syncedDescription and image.hasOverride('description', language) %}
+                <div class="light smalltext imageshop-img-container__synced">{{ 'Imageshop'|t('imageshop-dam') }}: {{ syncedDescription }}</div>
+            {% endif %}
         </div>
 
         </div>

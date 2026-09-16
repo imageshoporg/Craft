@@ -10,14 +10,11 @@
 
 namespace Imageshop\Imageshop\services;
 
-use Imageshop\Imageshop\fields\ImageShopField;
 use Imageshop\Imageshop\ImageShop as Plugin;
-use Imageshop\Imageshop\jobs\Sync;
 
 use Craft;
 use craft\base\Component;
 use craft\db\Query;
-use craft\db\Table;
 use craft\helpers\App;
 use craft\helpers\Db;
 use craft\helpers\Json;
@@ -168,158 +165,23 @@ class ImageShop extends Component
     }
 
     /**
-     * gets all the imageshop field column names for the content table
+     * Merges per-language API metadata into the stored picker JSON.
      *
-     * @return array an array of column names
-     **/
-    public function getImageShopFields(): array
-    {
-        $imageShopFields = Craft::$app->getFields()->getFieldsByType(ImageShopField::class);
-        $fields = [];
-        foreach ($imageShopFields as $field) {
-            $columnName = '';
-            if ($field->columnPrefix) {
-                $columnName .= $field->columnPrefix . '_';
-            }
-            $columnName .= 'field_' . $field->handle;
-            if ($field->columnSuffix) {
-                $columnName .= '_' . $field->columnSuffix;
-            }
-            $fields[] = $columnName;
-        }
-
-        return $fields;
-    }
-
-    /**
-     * Get all rows from the content table that contain an imageshop field value
-     * and format them into format with keys: 'rowId','rowUid','documentIds','fields' (contains all document data)
+     * Only the `text` block is written. Every language in `$dataFromApi` is
+     * applied, and a language the stored value did not have yet gets a new
+     * block, so a Craft site added after the image was picked receives its
+     * text on the next sync. Local editor overrides live in `overrides` and
+     * are never touched here — that is what lets the sync run freely without
+     * destroying context-specific alt text entered in Craft.
      *
-     * @return array
-     **/
-    public function getAllImageShopContentRows(): array
-    {
-        $fields = $this->getImageShopFields();
-
-        $rowsQuery = (new Query())
-            ->select('*')
-            ->from(Table::CONTENT);
-
-        // Use OR so rows with ANY ImageShop field populated are included
-        $condition = ['or'];
-        foreach ($fields as $field) {
-            $condition[] = ['not', [$field => null]];
-        }
-        $rowsQuery->andWhere($condition);
-        // would be better to do this with something like JSON_CONTAINS but
-        // can't be certain about db driver or version on system.
-
-        $rows = [];
-        foreach ($rowsQuery->each() as $value) {
-            $row = [
-                'rowId' => $value['id'],
-                'rowUid' => $value['uid'],
-                'documentIds' => [],
-                'fields' => []
-            ];
-
-            foreach ($fields as $field) {
-                if (array_key_exists($field,$value) && is_string($value[$field]) && Json::isJsonObject($value[$field])) {
-                    $fieldValue = Json::decode($value[$field]);
-                    // deal with pre-allow multiple update
-                    if (array_key_exists('documentId', $fieldValue)) {
-                       $fieldValue = [$fieldValue];
-                    }
-
-                    foreach ($fieldValue as $v) {
-                        $imageData = is_array($v) ? $v : Json::decodeIfJson($v);
-                        $row['documentIds'][] = $imageData['documentId'];
-                        $row['fields'][$field][($imageData['documentId'])] = $imageData;
-                    }
-                }
-            }
-            $rows[] = $row;
-        }
-        return $rows;
-
-    }
-
-    /**
-     * Updates the content of an imageshop field with data from the
-     * recently updated cache
-     *
-     * @param array $config Details of the row to be updated, must contain 'rowId','rowUid' and 'documentId'
-     **/
-    public function updateContentRow(array $config): void
-    {
-        $fieldColumnNames = $this->getImageShopFields();
-        $updatedDocuments = $this->getDocumentCache();
-
-        $rowsQuery = (new Query())
-            ->select($fieldColumnNames)
-            ->from(Table::CONTENT)
-            ->where([
-                'id' => $config['rowId'],
-                'uid' => $config['rowUid']
-            ])
-            ->one();
-
-        if (!$rowsQuery) {
-            return;
-        }
-
-        $newData = [];
-        foreach ($fieldColumnNames as $columnName) {
-            if ($rowsQuery[$columnName] === null) {
-                continue;
-            }
-            $oldData = Json::decodeIfJson($rowsQuery[$columnName]);
-            $newData[$columnName] = [];
-            if (is_array($oldData)) {
-                if (array_key_exists('documentId', $oldData)) {
-                    $oldData = [$oldData];
-                }
-                foreach ($oldData as $documentJson) {
-                    $document = Json::decodeIfJson($documentJson);
-                    if (array_key_exists($document['documentId'], $updatedDocuments)) {
-                        $newData[$columnName][] = $this->mapDocumentFields($document,$updatedDocuments[$document['documentId']]);
-                    } else {
-                        $newData[$columnName][] = $document;
-                    }
-                }
-                $newData[$columnName] = Json::encode($newData[$columnName]);
-            } else {
-                $newData[$columnName] = Json::encode($oldData);
-            }
-        }
-
-        Craft::$app->getDb()
-            ->createCommand()
-            ->update(
-                Table::CONTENT,
-                $newData,
-                [
-                    'id' => $config['rowId'],
-                    'uid' => $config['rowUid']
-                ]
-            )
-            ->execute();
-
-        return;
-    }
-
-    /**
-     * Maps API data for sync to the stored field values
-     *
-     * @param array $dataFromPicker Data model that comes from the imageshop image picker pop up
-     * @param array $dataFromApi Data model that comes from API during sync
-     * @return array $mapped The updated data in the form of the picker data
+     * @param array $dataFromPicker Stored image JSON as produced by the picker
+     * @param array $dataFromApi Per-language API responses: [lang => apiDoc]
+     * @return array The updated image JSON
      **/
     public function mapDocumentFields(array $dataFromPicker, array $dataFromApi): array
     {
         $mapped = $dataFromPicker;
 
-        // The cache stores per-language API responses: { lang => apiDoc }
         // Each apiDoc has top-level fields: AltText, Description, Credits, etc.
         $fieldMap = [
             'altText' => 'AltText',
@@ -330,119 +192,59 @@ class ImageShop extends Component
             'tags' => 'Tags',
         ];
 
-        if (isset($mapped['text']) && is_array($mapped['text'])) {
-            foreach ($mapped['text'] as $lang => &$textBlock) {
-                if (!isset($dataFromApi[$lang]) || !is_array($dataFromApi[$lang])) {
-                    continue;
-                }
-                $apiDoc = $dataFromApi[$lang];
-                foreach ($fieldMap as $pickerKey => $apiKey) {
-                    if (array_key_exists($apiKey, $apiDoc)) {
-                        $textBlock[$pickerKey] = $apiDoc[$apiKey];
-                    }
+        if (!isset($mapped['text']) || !is_array($mapped['text'])) {
+            $mapped['text'] = [];
+        }
+
+        foreach ($dataFromApi as $lang => $apiDoc) {
+            if (!is_array($apiDoc)) {
+                continue;
+            }
+
+            $textBlock = $mapped['text'][$lang] ?? null;
+            if (!is_array($textBlock)) {
+                // Same shape the picker produces, so templates see no difference.
+                $textBlock = [
+                    'title' => null,
+                    'description' => null,
+                    'rights' => null,
+                    'credits' => null,
+                    'tags' => null,
+                    'altText' => null,
+                    'categories' => null,
+                    'documentinfo' => null,
+                ];
+            }
+
+            foreach ($fieldMap as $pickerKey => $apiKey) {
+                if (array_key_exists($apiKey, $apiDoc)) {
+                    $textBlock[$pickerKey] = $apiDoc[$apiKey];
                 }
             }
-            unset($textBlock);
+
+            $mapped['text'][$lang] = $textBlock;
         }
 
         return $mapped;
     }
 
     /**
-     * Updates the recently updated dump in the db
+     * Fetches the latest metadata for changed documents into the document cache.
      *
-     * @return void
+     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->updateRecentlyUpdatedCache()`.
      **/
     public function updateRecentlyUpdatedCache(): void
     {
-        $recentlyUpdatedIds = $this->_getRecentlyUpdated();
-        $imageShopDbRows = $this->getAllImageShopContentRows();
-        $this->_getNewImageData($imageShopDbRows, $recentlyUpdatedIds);
-    }
-
-
-    /**
-     * Creates the recently updated document cache using the getDocumentById API call.
-     * Fetches each document once per language found in the picker data so that
-     * all language-specific text fields can be synced.
-     *
-     * Cache format: { documentId => { lang => apiResponse, ... }, ... }
-     *
-     * @param array $dbRows data from content table row in the format 'rowId','rowUid','documentIds','fields' (contains all document data)
-     * @param array $recentlyUpdatedIds Document Ids from the recently updated api call
-     **/
-    private function _getNewImageData(array $dbRows, $recentlyUpdatedIds): void
-    {
-        $documentCache = [];
-        $documentIds = $this->_getDocumentIdsFromImages($dbRows);
-        $forUpdate = array_intersect($documentIds, $recentlyUpdatedIds);
-
-        if (count($forUpdate) > 0) {
-            // Collect all languages present in the picker data
-            $languages = $this->_getLanguagesFromContentRows($dbRows);
-
-            foreach ($forUpdate as $documentId) {
-                $documentCache[$documentId] = [];
-                foreach ($languages as $lang) {
-                    $doc = $this->getDocumentById($documentId, $lang);
-                    if ($doc) {
-                        $documentCache[$documentId][$lang] = $doc;
-                    }
-                }
-            }
-        }
-
-        // Always update cache and bump lastUpdated timestamp,
-        // even when empty, to clear stale data and prevent re-fetching
-        $this->_setDocumentCache($documentCache);
+        Plugin::getInstance()->sync->updateRecentlyUpdatedCache();
     }
 
     /**
-     * Extracts all unique sanitized language codes from the picker text data
-     * across all content rows.
+     * Returns the ids of documents Imageshop reports as changed since the
+     * last sync run.
      *
-     * @param array $rows Content rows from getAllImageShopContentRows
-     * @return array Unique language codes
+     * @return int[]
      **/
-    private function _getLanguagesFromContentRows(array $rows): array
-    {
-        $languages = [];
-        foreach ($rows as $row) {
-            foreach ($row['fields'] as $docs) {
-                foreach ($docs as $data) {
-                    if (isset($data['text']) && is_array($data['text'])) {
-                        foreach (array_keys($data['text']) as $lang) {
-                            $languages[$lang] = true;
-                        }
-                    }
-                }
-            }
-        }
-        return array_keys($languages);
-    }
-
-    /**
-     * Takes the formatted content table rows and returns all the documentIds in the whole site.
-     *
-     * @param array $images Content rows
-     * @return array Just the DocumentIds
-     **/
-    private function _getDocumentIdsFromImages(array $images): array
-    {
-        $columns = array_column($images, 'documentIds');
-        if (empty($columns)) {
-            return [];
-        }
-        return array_unique(array_merge(...$columns));
-    }
-
-    /**
-     * gets the recently updated documents from the imageshop API using the last time the
-     * update was run as the date.
-     *
-     * @return array Array of DocumentIds
-     **/
-    private function _getRecentlyUpdated(): array
+    public function getRecentlyUpdatedDocumentIds(): array
     {
         $lastUpdate = $this->_getDateLastUpdated();
         $response = $this->_request('GET','/Document/GetAllDocumentIdsChangedAfter',[
@@ -452,45 +254,18 @@ class ImageShop extends Component
             ]);
         $ids = Json::decodeIfJson($response);
 
-        return $ids ?? [];
+        return is_array($ids) ? array_map('intval', $ids) : [];
     }
 
     /**
-     * Creates the queue jobs to update all the relevant content rows in the db with the latest imageshop image data.
+     * Queues sync jobs for every element referencing a cached document.
      *
+     * @deprecated in 3.3.0. Use `ImageShop::getInstance()->sync->queueSyncJobs()`.
      * @return int Number of queue jobs created
      **/
     public function updateImages(): int
     {
-        $documentCache = $this->getDocumentCache();
-
-        if (count($documentCache) === 0) {
-            return 0;
-        }
-
-        $cachedDocumentIds = array_keys($documentCache);
-        $contentRows = $this->getAllImageShopContentRows();
-
-        // Only create jobs for rows that contain documents that actually changed
-        $affectedRows = array_filter($contentRows, function ($row) use ($cachedDocumentIds) {
-            return !empty(array_intersect($row['documentIds'], $cachedDocumentIds));
-        });
-
-        $index = 0;
-        $total = count($affectedRows);
-
-        foreach ($affectedRows as $row) {
-            Craft::$app->getQueue()->ttr(3600)->push(new Sync([
-                'rowId' => $row['rowId'],
-                'rowUid' => $row['rowUid'],
-                'documentIds' => Json::encode($row['documentIds']),
-                'fields' => Json::encode($row['fields']),
-                'index' => $index++,
-                'count' => $total
-            ]));
-        }
-
-        return $total;
+        return Plugin::getInstance()->sync->queueSyncJobs();
     }
 
     /**
@@ -657,12 +432,12 @@ class ImageShop extends Component
     }
 
     /**
-     * writes the new document cache to the db
+     * Writes the document cache to the db and bumps the last-synced timestamp.
      *
      * @param array $documentCache The new document data
      * @return bool
      **/
-    private function _setDocumentCache(array $documentCache): bool
+    public function setDocumentCache(array $documentCache): bool
     {
         $lastUpdate = Db::prepareDateForDb(new \DateTime());
         Craft::$app->getDb()
