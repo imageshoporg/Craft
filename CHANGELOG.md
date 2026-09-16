@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## 3.2.1 - 2026-09-16
+### Fixed
+- **Alt text and description edits are stored under the correct site language for Matrix blocks and slideout editors.** The CP field resolved its language from the `site` query param, which is only present on full page loads. Craft 5 renders newly added Matrix blocks (and element slideouts) over AJAX with just a `siteId` body param, so a block added on a non-primary site rendered its "Alternative text" / "Description" editors labelled with the primary site's language, and whatever the editor typed was written into that language's `text` block. On reload the labels switched to the correct language and the text appeared to have moved to another site. `ImageShopField::getCurrentAdminLanguage()` now takes the element being edited and resolves the language from its `siteId` first, falling back to the `site` / `siteId` request params and finally the primary site. `getInputHtml()` passes the resolved language to the template and the picker `culture` option instead of re-deriving it from the request. Request params are only read on web requests, so the method is safe to call from console commands and tests.
+
 ## 3.2.0 - 2026-08-11
 ### Fixed
 - **Permalinks are no longer regenerated when Craft's cache is cleared.** `/Permalink/CreatePermaLinkFromDocumentId` is not idempotent — every call mints a brand new permalink. Because `getCachedPermalink()` stored results in Craft's data cache, any cache flush (a deploy running `clear-caches`, a container restart, or simply a second app node with its own file cache) created a fresh URL that the CDN had never seen, costing several seconds on the next load. Permalinks now live in a new `imageshop-dam_permalinks` table keyed on `documentId` + `width` + `height`, so the create call happens once per derivative and survives deploys, restarts and multi-node setups. A cache miss can no longer reach the API at all.
