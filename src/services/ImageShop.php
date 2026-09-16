@@ -16,6 +16,7 @@ use Craft;
 use craft\base\Component;
 use craft\db\Query;
 use craft\helpers\App;
+use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use craft\helpers\Json;
 
@@ -140,7 +141,7 @@ class ImageShop extends Component
      *
      * @param int $documentId Document Id
      * @param string $language Requested language
-     * @return ?array document data
+     * @return array|false|null Document data; null when there is no such document; false when the request failed and should be retried
      **/
     public function getDocumentById(int $documentId, string $language): array|false|null
     {
@@ -177,7 +178,8 @@ class ImageShop extends Component
             return false;
         }
 
-        return is_array($decoded) && !array_is_list($decoded) ? $decoded : null;
+        // A document is a JSON object (associative array); a list is not one.
+        return is_array($decoded) && !ArrayHelper::isIndexed($decoded, true) ? $decoded : null;
     }
 
     /**
@@ -207,6 +209,30 @@ class ImageShop extends Component
             'rights' => 'Rights',
             'tags' => 'Tags',
         ];
+
+        // Never apply older metadata over newer. Sync runs can be applied out
+        // of order (two queue workers, a retried job), so the stored value
+        // remembers the document's `Changed` timestamp it came from and a
+        // cache from an earlier version of the document is ignored.
+        $apiChanged = null;
+        $apiChangedTs = null;
+        foreach ($dataFromApi as $apiDoc) {
+            if (is_array($apiDoc) && !empty($apiDoc['Changed']) && is_string($apiDoc['Changed'])) {
+                $ts = strtotime($apiDoc['Changed']);
+                if ($ts !== false && ($apiChangedTs === null || $ts > $apiChangedTs)) {
+                    $apiChangedTs = $ts;
+                    $apiChanged = $apiDoc['Changed'];
+                }
+            }
+        }
+
+        $storedChangedTs = isset($mapped['sync']['changed']) && is_string($mapped['sync']['changed'])
+            ? strtotime($mapped['sync']['changed'])
+            : false;
+
+        if ($apiChangedTs !== null && $storedChangedTs !== false && $storedChangedTs > $apiChangedTs) {
+            return $dataFromPicker;
+        }
 
         if (!isset($mapped['text']) || !is_array($mapped['text'])) {
             $mapped['text'] = [];
@@ -239,6 +265,10 @@ class ImageShop extends Component
             }
 
             $mapped['text'][$lang] = $textBlock;
+        }
+
+        if ($apiChanged !== null) {
+            $mapped['sync'] = ['changed' => $apiChanged];
         }
 
         return $mapped;
@@ -510,6 +540,10 @@ class ImageShop extends Component
             ])
             ->execute();
 
+        // Passing the table name is Craft's convention and is portable:
+        // craft\db\pgsql\Schema::getLastInsertID() resolves it to the
+        // `<schema>.<table>_id_seq` sequence, and MySQL ignores the argument.
+        // Craft core does the same (e.g. Drafts::insertDraftRow()).
         $runId = (int)$db->getLastInsertID($table);
 
         $cutoffId = (new Query())
@@ -525,6 +559,25 @@ class ImageShop extends Component
         }
 
         return $runId;
+    }
+
+    /**
+     * Advances the watermark a stored run vouches for.
+     *
+     * A run is first stored with the previous watermark, its work is done
+     * (jobs queued or elements saved), and only then is the watermark moved
+     * forward. If anything dies in between, the next run asks Imageshop for
+     * the same changes again; duplicate work is idempotent, lost work is not.
+     *
+     * @param int $runId
+     * @param string $watermark DB-formatted timestamp
+     **/
+    public function advanceSyncWatermark(int $runId, string $watermark): void
+    {
+        Craft::$app->getDb()
+            ->createCommand()
+            ->update('{{%imageshop-dam_sync}}', ['lastUpdated' => $watermark], ['id' => $runId])
+            ->execute();
     }
 
     /**

@@ -374,7 +374,7 @@ class Sync extends Component
                 'elementId' => $usage['elementId'],
                 'siteId' => $usage['siteId'],
                 'fieldHandles' => array_keys($usage['fields']),
-                'documentIds' => array_keys($documentIds),
+                'documents' => array_keys($documentIds),
                 'languages' => $usage['languages'],
                 'index' => $i + 1,
                 'count' => $total,
@@ -529,6 +529,12 @@ class Sync extends Component
         $failures = $fetch['failures'];
         $elements = 0;
 
+        // Store the snapshot with the previous watermark first, do the work,
+        // and advance the watermark last. If this process dies while queueing
+        // jobs or saving elements, the next run asks for the same changes
+        // again instead of skipping the ones that never got a job.
+        $runId = $this->storeRun($fetch, true);
+
         if ($inline) {
             if (!empty($cache)) {
                 $usages = iterator_to_array($this->findUsages(array_keys($cache)), false);
@@ -543,18 +549,14 @@ class Sync extends Component
                     }
                 }
             }
-
-            // Inline, the snapshot is stored after the elements are processed
-            // so a failed save can hold the watermark back as well.
-            $runId = $this->storeRun($fetch, $failures > 0);
         } else {
-            $runId = $this->storeRun($fetch, $failures > 0);
             $elements = $this->queueSyncJobs($cache, $runId);
         }
 
         if ($failures > 0) {
             $status = 'partial';
         } else {
+            $service->advanceSyncWatermark($runId, $fetch['watermark']);
             $status = $elements > 0 ? 'success' : 'no_changes';
         }
 

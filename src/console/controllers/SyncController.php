@@ -63,7 +63,7 @@ class SyncController extends Controller
         }
 
         if ($result['status'] === 'partial') {
-            $this->stdout("Some document requests failed. The fetched documents were applied; the sync window was not advanced, so the rest are retried next run.\n", Console::FG_YELLOW);
+            $this->stdout("{$result['failures']} Imageshop request(s) or element save(s) failed. What succeeded was applied; the sync window was not advanced, so the rest is retried next run. Check the Craft logs for details.\n", Console::FG_YELLOW);
         }
 
         $this->stdout("Documents changed: ", Console::FG_YELLOW);
@@ -80,11 +80,13 @@ class SyncController extends Controller
             $this->stdout("Run `php craft queue/run` if no queue runner is active.\n", Console::FG_GREY);
         }
 
-        if ($result['elements'] === 0) {
+        if ($result['status'] === 'no_changes') {
             $this->stdout("No changes to apply.\n", Console::FG_GREEN);
         }
 
-        return ExitCode::OK;
+        // Non-zero for a partial run so cron and monitoring can see that
+        // something is being retried, without treating it as an outage.
+        return $result['status'] === 'partial' ? ExitCode::TEMPFAIL : ExitCode::OK;
     }
 
     /**

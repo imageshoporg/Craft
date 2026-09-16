@@ -19,6 +19,7 @@ use Imageshop\Imageshop\gql\types\ImageShopType;
 use Craft;
 use craft\base\ElementInterface;
 use craft\base\Field;
+use craft\helpers\ArrayHelper;
 use craft\helpers\Db;
 use yii\db\Schema;
 use yii\base\Arrayable;
@@ -98,7 +99,7 @@ class ImageShopField extends Field
 
         if ($value instanceof Model) {
             $models = [$value];
-        } elseif (is_array($value) && array_is_list($value)) {
+        } elseif (is_array($value) && ArrayHelper::isIndexed($value, true)) {
             $models = array_filter($value, fn($image) => $image instanceof Model);
             if (empty($models)) {
                 // Craft 5: array of JSON strings or decoded associative arrays
@@ -116,7 +117,7 @@ class ImageShopField extends Field
             }
         } elseif (is_string($value) && Json::isJsonObject($value)) {
             $json = Json::decode($value);
-            if (array_is_list($json)) {
+            if (ArrayHelper::isIndexed($json, true)) {
                 $models = array_map(fn($image) => new Model($image), array_filter($json, fn($image) => !empty($image)));
             }
         } elseif (is_null($value)) {

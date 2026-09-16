@@ -371,6 +371,8 @@ A typical cron entry, running every 15 minutes without depending on a queue runn
 */15 * * * * cd /path/to/site && php craft imageshop-dam/sync/run --inline
 ```
 
+Exit codes: `0` for a successful or no-change run, `75` (temporary failure) when some requests or saves failed and will be retried, `69` (unavailable) when the Imageshop API could not be reached at all.
+
 ### Sync history
 
 Each sync run is logged and displayed in a **Sync history** table directly on the utility page. The table shows:
