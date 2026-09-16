@@ -12,8 +12,14 @@ use Imageshop\Imageshop\ImageShop;
  * refreshed.
  *
  * The job carries the id of the run that queued it and reads that run's
- * cache, so a later run (even a no-change one) cannot pull the data out from
- * under jobs that are still waiting in the queue.
+ * snapshot, so a later run (even a no-change one) cannot pull the data out
+ * from under jobs that are still waiting in the queue. If the snapshot has
+ * been pruned by the time the job runs (a queue backlogged across many later
+ * runs), the job fetches its documents from the API itself instead of
+ * silently doing nothing.
+ *
+ * A save that fails, or an API fetch that fails, throws so the job shows up
+ * as failed in the queue with the reason and can be retried from there.
  */
 class Sync extends BaseJob
 {
@@ -23,6 +29,10 @@ class Sync extends BaseJob
     public int $siteId = 0;
     /** @var string[] */
     public array $fieldHandles = [];
+    /** @var int[] The documents this element references that the run fetched */
+    public array $documentIds = [];
+    /** @var string[] Languages present in the element's stored values, for refetching */
+    public array $languages = [];
     public int $index = 0;
     public int $count = 0;
 
@@ -30,14 +40,30 @@ class Sync extends BaseJob
     {
         $this->setProgress($queue, $this->index / max($this->count, 1));
 
-        if ($this->elementType === '' || !$this->elementId || !$this->siteId || !$this->runId) {
+        if ($this->elementType === '' || !$this->elementId || !$this->siteId) {
             return;
         }
 
         $plugin = ImageShop::getInstance();
-        $documentCache = $plugin->service->getDocumentCache($this->runId);
+        $documentCache = $this->runId ? $plugin->service->getDocumentCache($this->runId) : [];
+
         if (empty($documentCache)) {
-            return;
+            if (empty($this->documentIds)) {
+                return;
+            }
+
+            // Snapshot gone: fetch what this element needs directly, in the
+            // languages it already has plus every site's language, which is
+            // the same set the run itself would have used.
+            $languages = array_values(array_unique(array_merge($this->languages, $plugin->sync->getSiteLanguages())));
+            $fetched = $plugin->sync->fetchDocuments($this->documentIds, $languages);
+            if ($fetched['failures'] > 0) {
+                throw new \RuntimeException("Sync snapshot for run {$this->runId} is gone and the Imageshop API could not be reached to refetch documents " . implode(', ', $this->documentIds) . '.');
+            }
+            $documentCache = $fetched['cache'];
+            if (empty($documentCache)) {
+                return;
+            }
         }
 
         $plugin->sync->syncElement(

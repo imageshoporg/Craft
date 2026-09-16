@@ -71,6 +71,7 @@ return [
     'Partial, will retry' => 'Delvis, prøves igjen',
     'Failed, API unreachable' => 'Mislyktes, API utilgjengelig',
     'Could not reach the Imageshop API. Nothing was changed; try again later.' => 'Fikk ikke kontakt med Imageshop-API-et. Ingenting ble endret; prøv igjen senere.',
+    'Some Imageshop requests failed. {count} sync {count, plural, =1{job was} other{jobs were}} queued for what could be fetched; run the sync again to retry the rest.' => 'Noen Imageshop-forespørsler feilet. {count} synkroniseringsjobb{count, plural, =1{} other{er}} ble lagt i kø for det som kunne hentes; kjør synkroniseringen på nytt for resten.',
     'Document' => 'Dokument',
     'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.' => 'La {count} synkroniseringsjobb{count, plural, =1{} other{er}} i køen. Følg med i køen for fremdrift.',
     'No changes found. All metadata is up to date.' => 'Ingen endringer funnet. All metadata er oppdatert.',

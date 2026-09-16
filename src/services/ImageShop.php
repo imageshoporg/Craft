@@ -163,11 +163,21 @@ class ImageShop extends Component
             return false;
         }
 
-        if (!is_string($response) || !Json::isJsonObject($response)) {
+        if (!is_string($response)) {
             return null;
         }
 
-        return Json::decode($response);
+        // The API answers 200 with a literal `null` body for a document that
+        // does not exist; that is a real answer. A body that is not JSON at
+        // all (a proxy error page, a truncated response) is not, and must be
+        // retried rather than recorded as "no document".
+        $decoded = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Craft::error("Imageshop API returned a non-JSON body for document {$documentId}", __METHOD__);
+            return false;
+        }
+
+        return is_array($decoded) && !array_is_list($decoded) ? $decoded : null;
     }
 
     /**
@@ -436,9 +446,12 @@ class ImageShop extends Component
 
     /**
      * How many sync run snapshots to keep. Queued jobs read the snapshot of
-     * the run that created them, so this only needs to outlast a queue backlog.
+     * the run that created them, so this should outlast any realistic queue
+     * backlog (100 runs is a day at a 15-minute cron). A job whose snapshot
+     * is gone anyway refetches its documents from the API, so pruning can
+     * delay a job but not lose an update.
      */
-    private const SYNC_RUNS_TO_KEEP = 20;
+    private const SYNC_RUNS_TO_KEEP = 100;
 
     /**
      * Returns the document cache of one sync run, or of the latest run.
@@ -791,6 +804,9 @@ class ImageShop extends Component
             // A slow API would otherwise stall a page render for a minute per image.
             'connect_timeout' => 5,
             'timeout' => 10,
+            // Handle status codes ourselves; with Guzzle's default a 404
+            // throws before the status branches below can run.
+            'http_errors' => false,
             'headers' => [
                 'Token' => App::parseEnv($settings->token),
                 'Accept' => 'application/json',
@@ -801,9 +817,9 @@ class ImageShop extends Component
         try {
             $response = $client->request($method, $action, $params);
         } catch (GuzzleException $e) {
-            // Transport failure or HTTP error: the caller must be able to tell
-            // this apart from "nothing there", or a sync run during an outage
-            // would be recorded as a successful empty one.
+            // Transport failure: the caller must be able to tell this apart
+            // from "nothing there", or a sync run during an outage would be
+            // recorded as a successful empty one.
             Craft::error('Imageshop API request failed: ' . $e->getMessage(), __METHOD__);
             return false;
         }

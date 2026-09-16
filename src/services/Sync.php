@@ -13,6 +13,7 @@ namespace Imageshop\Imageshop\services;
 use Craft;
 use craft\base\Component;
 use craft\base\ElementInterface;
+use craft\db\Table;
 use craft\helpers\Db;
 use Imageshop\Imageshop\fields\ImageShopField;
 use Imageshop\Imageshop\ImageShop as Plugin;
@@ -35,13 +36,18 @@ use Imageshop\Imageshop\models\ImageShop as ImageModel;
  * alone, the same way Craft's own "Resave elements" behaves.
  *
  * Reliability rules:
- *  - The sync watermark only advances after Imageshop has actually answered.
- *    An outage is logged as `failed` and changes it nothing.
+ *  - The sync watermark only advances after Imageshop has actually answered
+ *    and every fetched document was applied. An outage is logged as `failed`
+ *    and changes nothing.
  *  - Each run stores its own document snapshot and queued jobs read the
  *    snapshot of the run that created them, so a later run cannot make
- *    queued jobs skip documents.
- *  - If some document requests fail, what was fetched is applied but the
- *    watermark is kept, so the rest is retried next run (`partial`).
+ *    queued jobs skip documents. A job whose snapshot has been pruned fetches
+ *    its documents itself.
+ *  - If some document requests or element saves fail, what succeeded is kept
+ *    but the watermark is not advanced, so the rest is retried next run
+ *    (`partial`).
+ *  - Each element is locked for the duration of its update, so an editor
+ *    saving an override at the same moment cannot have it overwritten.
  *
  * Local alt text / description overrides live in the image JSON's `overrides`
  * block and are never written by the sync; see `mapDocumentFields()`.
@@ -212,34 +218,67 @@ class Sync extends Component
     }
 
     /**
-     * Asks Imageshop which documents changed since the last successful run,
-     * fetches the latest metadata for the ones in use (plus any in-use
-     * document missing a text block for a site language), and stores the
-     * result as a new run snapshot.
+     * Fetches the given documents from Imageshop in the given languages.
+     *
+     * A document the API reports as nonexistent is simply absent from the
+     * result; a request that fails counts as a failure and the caller decides
+     * whether the run may advance the watermark.
+     *
+     * @param int[] $documentIds
+     * @param string[] $languages
+     * @return array{cache: array, failures: int} `cache` is [documentId => [lang => apiDoc]]
+     */
+    public function fetchDocuments(array $documentIds, array $languages): array
+    {
+        $service = Plugin::getInstance()->service;
+        $cache = [];
+        $failures = 0;
+
+        foreach (array_unique(array_map('intval', $documentIds)) as $documentId) {
+            if (!$documentId) {
+                continue;
+            }
+            foreach (array_unique(array_filter($languages)) as $lang) {
+                $doc = $service->getDocumentById($documentId, $lang);
+                if ($doc === false) {
+                    $failures++;
+                } elseif ($doc) {
+                    $cache[$documentId][$service->sanitizeLanguage($lang)] = $doc;
+                }
+            }
+        }
+
+        return ['cache' => $cache, 'failures' => $failures];
+    }
+
+    /**
+     * Asks Imageshop which documents changed since the last successful run
+     * and fetches the latest metadata for the ones in use, plus any in-use
+     * document missing a text block for a site language. Nothing is stored.
      *
      * Metadata is fetched once per language, where the language set is the
      * union of the languages already present in the affected values and the
      * Imageshop language of every Craft site.
      *
-     * Returns `runId` (null when nothing was stored), the fetched `cache`,
-     * a `status` of `ok`, `partial` (some document requests failed; the
-     * watermark was not advanced) or `failed` (Imageshop could not be asked
-     * at all; nothing was stored), and the number of `failures`.
+     * Returns the fetched `cache`, a `status` of `ok`, `partial` (some
+     * document requests failed) or `failed` (Imageshop could not be asked at
+     * all), the number of `failures`, and the two watermarks the caller
+     * chooses between when storing the run: `watermark` (taken before the
+     * changed-ids request, so a document changed mid-run is reported next
+     * time) and `previousWatermark`.
      *
-     * @return array{runId: ?int, cache: array, status: string, failures: int}
+     * @return array{cache: array, status: string, failures: int, watermark: string, previousWatermark: string}
      */
-    public function updateRecentlyUpdatedCache(): array
+    public function fetchChangedDocuments(): array
     {
         $service = Plugin::getInstance()->service;
 
-        // Take the watermark before asking, so a document that changes while
-        // this run is fetching is reported to the next run instead of lost.
         $previousWatermark = $service->getDateLastUpdated();
         $watermark = Db::prepareDateForDb(new \DateTime());
 
         $changed = $service->getRecentlyUpdatedDocumentIds();
         if ($changed === null) {
-            return ['runId' => null, 'cache' => [], 'status' => 'failed', 'failures' => 1];
+            return ['cache' => [], 'status' => 'failed', 'failures' => 1, 'watermark' => $watermark, 'previousWatermark' => $previousWatermark];
         }
 
         $siteLanguages = $this->getSiteLanguages();
@@ -257,33 +296,56 @@ class Sync extends Component
             }
         }
 
-        $cache = [];
-        $failures = 0;
+        $fetched = $this->fetchDocuments(array_keys($inUse), array_keys($languages));
 
-        foreach (array_keys($inUse) as $documentId) {
-            foreach (array_keys($languages) as $lang) {
-                $doc = $service->getDocumentById($documentId, $lang);
-                if ($doc === false) {
-                    $failures++;
-                } elseif ($doc) {
-                    $cache[$documentId][$service->sanitizeLanguage($lang)] = $doc;
-                }
-            }
+        return [
+            'cache' => $fetched['cache'],
+            'status' => $fetched['failures'] > 0 ? 'partial' : 'ok',
+            'failures' => $fetched['failures'],
+            'watermark' => $watermark,
+            'previousWatermark' => $previousWatermark,
+        ];
+    }
+
+    /**
+     * Fetches changed documents and stores them as a new run snapshot.
+     *
+     * A partial fetch is stored with the previous watermark so the next run
+     * asks for everything since then again; a failed fetch stores nothing.
+     *
+     * @return array{runId: ?int, cache: array, status: string, failures: int}
+     */
+    public function updateRecentlyUpdatedCache(): array
+    {
+        $fetch = $this->fetchChangedDocuments();
+
+        if ($fetch['status'] === 'failed') {
+            return ['runId' => null, 'cache' => [], 'status' => 'failed', 'failures' => $fetch['failures']];
         }
 
-        $status = $failures > 0 ? 'partial' : 'ok';
+        $runId = $this->storeRun($fetch, $fetch['status'] === 'partial');
 
-        // A partial run keeps the previous watermark so everything since then
-        // is asked for again next time; only a clean run advances it.
-        $runId = $service->setDocumentCache($cache, $status === 'partial' ? $previousWatermark : $watermark);
+        return ['runId' => $runId, 'cache' => $fetch['cache'], 'status' => $fetch['status'], 'failures' => $fetch['failures']];
+    }
 
-        return ['runId' => $runId, 'cache' => $cache, 'status' => $status, 'failures' => $failures];
+    /**
+     * Stores a fetch result as a run snapshot and returns the run id.
+     *
+     * @param array $fetch Result of fetchChangedDocuments()
+     * @param bool $keepWatermark Store with the previous watermark instead of advancing
+     */
+    protected function storeRun(array $fetch, bool $keepWatermark): int
+    {
+        return Plugin::getInstance()->service->setDocumentCache(
+            $fetch['cache'],
+            $keepWatermark ? $fetch['previousWatermark'] : $fetch['watermark']
+        );
     }
 
     /**
      * Queues one job per element/site combination that references a document
-     * in the given run's cache. Jobs carry the run id and read that run's
-     * snapshot when they execute.
+     * in the given run's cache. Jobs carry the run id (to read that run's
+     * snapshot) and their document ids (to refetch if the snapshot is gone).
      *
      * @param array $documentCache The run's cache
      * @param int $runId The run the cache belongs to
@@ -299,12 +361,21 @@ class Sync extends Component
         $total = count($usages);
 
         foreach ($usages as $i => $usage) {
+            $documentIds = [];
+            foreach ($usage['fields'] as $ids) {
+                foreach ($ids as $id) {
+                    $documentIds[$id] = true;
+                }
+            }
+
             Craft::$app->getQueue()->ttr(3600)->push(new SyncJob([
                 'runId' => $runId,
                 'elementType' => $usage['elementType'],
                 'elementId' => $usage['elementId'],
                 'siteId' => $usage['siteId'],
                 'fieldHandles' => array_keys($usage['fields']),
+                'documentIds' => array_keys($documentIds),
+                'languages' => $usage['languages'],
                 'index' => $i + 1,
                 'count' => $total,
             ]));
@@ -317,12 +388,19 @@ class Sync extends Component
      * Applies a document cache to one element in one site and saves it
      * through the element lifecycle.
      *
+     * The element's row is locked for the duration, so an editor saving a
+     * local override at the same moment either lands before this update is
+     * read (and is preserved) or waits until it is written. Without the lock
+     * the sync could read an element, an editor could save an override, and
+     * the sync's save would then overwrite it.
+     *
      * @param string $elementType Element class
      * @param int $elementId
      * @param int $siteId
      * @param string[] $fieldHandles Imageshop field handles on the element
      * @param array|null $documentCache The cache to apply, or null for the latest run's
-     * @return bool Whether the element was changed and saved
+     * @return bool true when the element was changed and saved, false when the cache changed nothing
+     * @throws \RuntimeException when the element needed updating but could not be saved
      */
     public function syncElement(string $elementType, int $elementId, int $siteId, array $fieldHandles, ?array $documentCache = null): bool
     {
@@ -331,35 +409,50 @@ class Sync extends Component
             return false;
         }
 
-        $element = Craft::$app->getElements()->getElementById($elementId, $elementType, $siteId);
-        if (!$element || $element->getIsRevision()) {
-            return false;
-        }
+        $db = Craft::$app->getDb();
 
-        $changed = false;
-        foreach ($fieldHandles as $handle) {
-            $models = $element->getFieldValue($handle);
-            if (!is_array($models) || empty($models)) {
-                continue;
+        return $db->transaction(function() use ($db, $elementType, $elementId, $siteId, $fieldHandles, $documentCache): bool {
+            // Row lock on the element until this transaction ends.
+            $db->createCommand(
+                'SELECT [[id]] FROM ' . Table::ELEMENTS . ' WHERE [[id]] = :id FOR UPDATE',
+                [':id' => $elementId]
+            )->queryScalar();
+
+            $element = Craft::$app->getElements()->getElementById($elementId, $elementType, $siteId);
+            if (!$element || $element->getIsRevision()) {
+                return false;
             }
 
-            $result = $this->applyDocumentCache($models, $documentCache);
-            if ($result['changed']) {
-                $element->setFieldValue($handle, $result['models']);
-                $changed = true;
+            $changed = false;
+            foreach ($fieldHandles as $handle) {
+                $models = $element->getFieldValue($handle);
+                if (!is_array($models) || empty($models)) {
+                    continue;
+                }
+
+                $result = $this->applyDocumentCache($models, $documentCache);
+                if ($result['changed']) {
+                    $element->setFieldValue($handle, $result['models']);
+                    $changed = true;
+                }
             }
-        }
 
-        if (!$changed) {
-            return false;
-        }
+            if (!$changed) {
+                return false;
+            }
 
-        // Leave dateUpdated alone; this is a metadata refresh, not an edit.
-        $element->resaving = true;
+            // Leave dateUpdated alone; this is a metadata refresh, not an edit.
+            $element->resaving = true;
 
-        // Each site is its own job, so don't propagate. Skip validation so an
-        // unrelated invalid field cannot block a metadata refresh.
-        return Craft::$app->getElements()->saveElement($element, false, false, true);
+            // Each site is its own job, so don't propagate. Skip validation so an
+            // unrelated invalid field cannot block a metadata refresh.
+            if (!Craft::$app->getElements()->saveElement($element, false, false, true)) {
+                $errors = implode('; ', array_map(fn($e) => implode(', ', $e), $element->getErrors())) ?: 'a save hook declined the save';
+                throw new \RuntimeException("Could not save {$elementType} {$elementId} (site {$siteId}) after syncing Imageshop metadata: {$errors}");
+            }
+
+            return true;
+        });
     }
 
     /**
@@ -402,18 +495,19 @@ class Sync extends Component
      * Runs a full sync: fetch changed documents, then either queue one job per
      * affected element/site or process them immediately. The run is logged.
      *
-     * `status` is `success`, `no_changes`, `partial` (applied what could be
-     * fetched, will retry the rest) or `failed` (Imageshop unreachable,
-     * nothing changed).
+     * `status` is `success`, `no_changes`, `partial` (some document requests
+     * or, inline, some element saves failed; what succeeded is kept and the
+     * watermark is held so the rest is retried) or `failed` (Imageshop
+     * unreachable, nothing changed).
      *
      * @param bool $inline Process elements now instead of queueing jobs
-     * @return array{runId: ?int, documentsChanged: int, elements: int, inline: bool, status: string, details: array}
+     * @return array{runId: ?int, documentsChanged: int, elements: int, failures: int, inline: bool, status: string, details: array}
      */
     public function run(bool $inline = false): array
     {
         $service = Plugin::getInstance()->service;
 
-        $fetch = $this->updateRecentlyUpdatedCache();
+        $fetch = $this->fetchChangedDocuments();
 
         if ($fetch['status'] === 'failed') {
             $service->logSync(0, 0, 'failed', []);
@@ -422,6 +516,7 @@ class Sync extends Component
                 'runId' => null,
                 'documentsChanged' => 0,
                 'elements' => 0,
+                'failures' => $fetch['failures'],
                 'inline' => $inline,
                 'status' => 'failed',
                 'details' => [],
@@ -429,25 +524,35 @@ class Sync extends Component
         }
 
         $cache = $fetch['cache'];
-        $runId = $fetch['runId'];
         $documentsChanged = count($cache);
         $details = $service->buildSyncDetails($cache);
-
+        $failures = $fetch['failures'];
         $elements = 0;
+
         if ($inline) {
             if (!empty($cache)) {
                 $usages = iterator_to_array($this->findUsages(array_keys($cache)), false);
                 foreach ($usages as $usage) {
-                    if ($this->syncElement($usage['elementType'], $usage['elementId'], $usage['siteId'], array_keys($usage['fields']), $cache)) {
-                        $elements++;
+                    try {
+                        if ($this->syncElement($usage['elementType'], $usage['elementId'], $usage['siteId'], array_keys($usage['fields']), $cache)) {
+                            $elements++;
+                        }
+                    } catch (\Throwable $e) {
+                        Craft::error($e->getMessage(), __METHOD__);
+                        $failures++;
                     }
                 }
             }
+
+            // Inline, the snapshot is stored after the elements are processed
+            // so a failed save can hold the watermark back as well.
+            $runId = $this->storeRun($fetch, $failures > 0);
         } else {
+            $runId = $this->storeRun($fetch, $failures > 0);
             $elements = $this->queueSyncJobs($cache, $runId);
         }
 
-        if ($fetch['status'] === 'partial') {
+        if ($failures > 0) {
             $status = 'partial';
         } else {
             $status = $elements > 0 ? 'success' : 'no_changes';
@@ -459,6 +564,7 @@ class Sync extends Component
             'runId' => $runId,
             'documentsChanged' => $documentsChanged,
             'elements' => $elements,
+            'failures' => $failures,
             'inline' => $inline,
             'status' => $status,
             'details' => $details,

@@ -25,6 +25,12 @@ class DefaultController extends Controller
             Craft::$app->getSession()->setError(
                 Craft::t('imageshop-dam', 'Could not reach the Imageshop API. Nothing was changed; try again later.')
             );
+        } elseif ($result['status'] === 'partial') {
+            Craft::$app->getSession()->setError(
+                Craft::t('imageshop-dam', 'Some Imageshop requests failed. {count} sync {count, plural, =1{job was} other{jobs were}} queued for what could be fetched; run the sync again to retry the rest.', [
+                    'count' => $result['elements'],
+                ])
+            );
         } elseif ($result['elements'] > 0) {
             Craft::$app->getSession()->setNotice(
                 Craft::t('imageshop-dam', 'Queued {count} sync {count, plural, =1{job} other{jobs}}. Check the queue to monitor progress.', [
